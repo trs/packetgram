@@ -1,0 +1,26 @@
+{
+  "name": "packetgram",
+  "version": "0.0.1",
+  "description": "Read and write packets using buffers",
+  "main": "dist/packet.js",
+  "types": "dist/packet.d.ts",
+  "scripts": {
+    "build": "tsc -d",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "buffer",
+    "packet",
+    "endian"
+  ],
+  "author": {
+    "email": "git@tylerstewart.ca",
+    "name": "Tyler Stewart",
+    "url": "https://tylerstewart.ca"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^13.11.1",
+    "typescript": "^3.8.3"
+  }
+}
