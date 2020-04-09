@@ -4,6 +4,9 @@
   "description": "Read and write packets using buffers",
   "main": "dist/packet.js",
   "types": "dist/packet.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "test": "npm run test:node && npm run test:browser",
     "pretest:browser": "npm run build",
