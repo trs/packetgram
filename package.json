@@ -1,10 +1,11 @@
 {
   "name": "packetgram",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Read and write packets using buffers",
   "main": "dist/packet.js",
   "types": "dist/packet.d.ts",
   "scripts": {
+    "test": "jest",
     "build": "tsc -d",
     "prepublishOnly": "npm run build"
   },
@@ -19,8 +20,15 @@
     "url": "https://tylerstewart.ca"
   },
   "license": "MIT",
+  "jest": {
+    "preset": "ts-jest"
+  },
   "devDependencies": {
+    "@types/jest": "^25.2.1",
     "@types/node": "^13.11.1",
+    "jest": "^25.3.0",
+    "semantic-release": "^17.0.4",
+    "ts-jest": "^25.3.1",
     "typescript": "^3.8.3"
   }
 }
