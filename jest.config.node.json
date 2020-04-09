@@ -1,0 +1,6 @@
+{
+  "preset": "ts-jest",
+  "testRegex": [
+    "/test/node/.*\\.spec\\.ts$"
+  ]
+}

@@ -1,23 +1,18 @@
-interface PacketSettings {
-  unsafe: boolean;
-}
-
 export default class Packet {
-  #buffer: Buffer;
+  private buffer: ArrayBuffer;
+  private view: DataView;
+
   public offset: number = 0;
 
-  public constructor(size: number, settings?: PacketSettings)
-  public constructor(data: Buffer | ArrayBuffer | SharedArrayBuffer, offset?: number, length?: number)
-  public constructor(value: Buffer | ArrayBuffer | SharedArrayBuffer | number, offsetOrSettings?: number | PacketSettings, length?: number) {
-    if (typeof value === 'number' && (typeof offsetOrSettings === 'object' || typeof offsetOrSettings === 'undefined')) {
-      this.#buffer = (offsetOrSettings ?? {}).unsafe === true
-        ? Buffer.allocUnsafe(value)
-        : Buffer.alloc(value);
-    } else if (typeof value !== 'number' && (typeof offsetOrSettings === 'number' || typeof offsetOrSettings === 'undefined')) {
-      this.#buffer = Buffer.from(value, offsetOrSettings ?? 0, length);
+  public constructor(size: number)
+  public constructor(data: ArrayBuffer | SharedArrayBuffer, offset?: number, length?: number)
+  public constructor(data: number | ArrayBuffer | SharedArrayBuffer, offset?: number, length?: number) {
+    if (typeof data === 'number') {
+      this.buffer = new ArrayBuffer(data);
     } else {
-      throw new TypeError();
+      this.buffer = data.slice(offset ?? 0, length);
     }
+    this.view = new DataView(this.buffer);
   }
 
   // Static
@@ -27,151 +22,144 @@ export default class Packet {
     return new Packet(size);
   }
 
-  /** Allocate a new buffer with the given size. */
-  public static allocUnsafe(size: number) {
-    return new Packet(size, {unsafe: true});
-  }
-
-  /** Create a buffer from a given source */
-  public static from(value: Packet | Buffer | ArrayBuffer | SharedArrayBuffer, offset?: number, length?: number) {
-    if (value instanceof Packet) {
-      return new Packet(value.toBuffer(), offset, length);
-    } else {
-      return new Packet(value, offset, length);
-    }
+  public static from(data: ArrayBuffer | SharedArrayBuffer) {
+    return new Packet(data);
   }
 
   // Read
 
   /** Read 1 byte from the current offset as a signed number */
   public readSByte() {
-    const value = this.#buffer.readInt8(this.offset);
+    const value = this.view.getInt8(this.offset);
     this.offset += 1;
     return value;
   }
 
   /** Read 2 bytes from the current offset as a signed number */
   public readInt16LE() {
-    const value = this.#buffer.readInt16LE(this.offset);
+    const value = this.view.getInt16(this.offset, true);
     this.offset += 2;
     return value;
   }
 
   /** Read 4 bytes from the current offset as a signed number */
   public readInt32LE() {
-    const value = this.#buffer.readInt32LE(this.offset);
+    const value = this.view.getInt32(this.offset, true);
     this.offset += 4;
     return value;
   }
 
   /** Read 4 bytes from the current offset as a signed bigint */
   public readInt64LE() {
-    const value = this.#buffer.readBigInt64LE(this.offset);
+    const value = this.view.getBigInt64(this.offset, true);
     this.offset += 8;
     return value;
   }
 
   /** Read 1 byte from the current offset as an unsigned number */
   public readByte() {
-    const value = this.#buffer.readUInt8(this.offset);
+    const value = this.view.getUint8(this.offset);
     this.offset += 1;
     return value;
   }
 
   /** Read 2 bytes from the current offset as an unsigned number */
   public readUInt16LE() {
-    const value = this.#buffer.readUInt16LE(this.offset);
+    const value = this.view.getUint16(this.offset, true);
     this.offset += 2;
     return value;
   }
 
   /** Read 4 bytes from the current offset as an unsigned number */
   public readUInt32LE() {
-    const value = this.#buffer.readUInt32LE(this.offset);
+    const value = this.view.getUint32(this.offset, true);
     this.offset += 4;
     return value;
   }
 
   /** Read 8 bytes from the current offset as an unsigned bigint */
   public readUInt64LE() {
-    const value = this.#buffer.readBigUInt64LE(this.offset);
+    const value = this.view.getBigUint64(this.offset, true);
     this.offset += 8;
     return value;
   }
 
   /** Read 8 bytes from the current offset as a double */
   public readDoubleLE() {
-    const value = this.#buffer.readDoubleLE(this.offset);
+    const value = this.view.getFloat64(this.offset, true);
     this.offset += 8;
     return value;
   }
 
   /** Read 4 bytes from the current offset as a float */
   public readFloatLE() {
-    const value = this.#buffer.readFloatLE(this.offset);
+    const value = this.view.getFloat32(this.offset, true);
     this.offset += 4;
     return value;
   }
 
   /** Read 2 bytes from the current offset as a signed number */
   public readInt16BE() {
-    const value = this.#buffer.readInt16BE(this.offset);
+    const value = this.view.getInt16(this.offset, false);
     this.offset += 2;
     return value;
   }
 
   /** Read 4 bytes from the current offset as a signed number */
   public readInt32BE() {
-    const value = this.#buffer.readInt32BE(this.offset);
+    const value = this.view.getInt32(this.offset, false);
     this.offset += 4;
     return value;
   }
 
   /** Read 4 bytes from the current offset as a signed bigint */
   public readInt64BE() {
-    const value = this.#buffer.readBigInt64BE(this.offset);
+    const value = this.view.getBigInt64(this.offset, false);
     this.offset += 8;
     return value;
   }
 
   /** Read 2 bytes from the current offset as an unsigned number */
   public readUInt16BE() {
-    const value = this.#buffer.readUInt16BE(this.offset);
+    const value = this.view.getUint16(this.offset, false);
     this.offset += 2;
     return value;
   }
 
   /** Read 4 bytes from the current offset as an unsigned number */
   public readUInt32BE() {
-    const value = this.#buffer.readUInt32BE(this.offset);
+    const value = this.view.getUint32(this.offset, false);
     this.offset += 4;
     return value;
   }
 
   /** Read 8 bytes from the current offset as an unsigned bigint */
   public readUInt64BE() {
-    const value = this.#buffer.readBigUInt64BE(this.offset);
+    const value = this.view.getBigUint64(this.offset, false);
     this.offset += 8;
     return value;
   }
 
   /** Read 8 bytes from the current offset as a double */
   public readDoubleBE() {
-    const value = this.#buffer.readDoubleBE(this.offset);
+    const value = this.view.getFloat64(this.offset, false);
     this.offset += 8;
     return value;
   }
 
   /** Read 4 bytes from the current offset as a float */
   public readFloatBE() {
-    const value = this.#buffer.readFloatBE(this.offset);
+    const value = this.view.getFloat32(this.offset, false);
     this.offset += 4;
     return value;
   }
 
   /** Read any number of bytes from the current offset as a string */
-  public readString(length: number, encoding: BufferEncoding = 'utf-8') {
-    const value = this.#buffer.toString(encoding, this.offset, this.offset + length);
+  public readString(length: number, encoding?: BufferEncoding) {
+    let value = '';
+    for (let i = 0; i < length; i++) {
+      value += String.fromCharCode(this.view.getUint8(this.offset + i));
+    }
     this.offset += length;
     return value;
   }
@@ -180,142 +168,143 @@ export default class Packet {
 
   /** Write 1 signed byte to the current offset */
   public writeSByte(value: number) {
-    this.#buffer.writeInt8(value, this.offset);
+    this.view.setInt8(this.offset, value);
     this.offset += 1;
     return this;
   }
 
   /** Write 2 signed bytes to the current offset */
   public writeInt16LE(value: number) {
-    this.#buffer.writeInt16LE(value, this.offset);
+    this.view.setInt16(this.offset, value, true);
     this.offset += 2;
     return this;
   }
 
   /** Write 4 signed bytes to the current offset */
   public writeInt32LE(value: number) {
-    this.#buffer.writeInt32LE(value, this.offset);
+    this.view.setInt32(this.offset, value, true);
     this.offset += 4;
     return this;
   }
 
   /** Write 8 signed bytes to the current offset */
   public writeInt64LE(value: bigint) {
-    this.#buffer.writeBigInt64LE(value, this.offset);
+    this.view.setBigInt64(this.offset, value, true);
     this.offset += 8;
     return this;
   }
 
   /** Write 1 unsigned byte to the current offset */
   public writeByte(value: number) {
-    this.#buffer.writeUInt8(value, this.offset);
+    this.view.setUint8(this.offset, value);
     this.offset += 1;
     return this;
   }
 
   /** Write 2 unsigned bytes to the current offset */
   public writeUInt16LE(value: number) {
-    this.#buffer.writeUInt16LE(value, this.offset);
+    this.view.setUint16(this.offset, value, true);
     this.offset += 2;
     return this;
   }
 
   /** Write 4 unsigned bytes to the current offset */
   public writeUInt32LE(value: number) {
-    this.#buffer.writeUInt32LE(value, this.offset);
+    this.view.setUint32(this.offset, value, true);
     this.offset += 4;
     return this;
   }
 
   /** Write 8 unsigned bytes to the current offset */
   public writeUInt64LE(value: bigint) {
-    this.#buffer.writeBigUInt64LE(value, this.offset);
+    this.view.setBigUint64(this.offset, value, true);
     this.offset += 8;
     return this;
   }
 
   /** Write 8 unsigned bytes to the current offset */
   public writeDoubleLE(value: number) {
-    this.#buffer.writeDoubleLE(value, this.offset);
+    this.view.setFloat64(this.offset, value, true);
     this.offset += 8;
     return this;
   }
 
   /** Write 4 unsigned bytes to the current offset */
   public writeFloatLE(value: number) {
-    this.#buffer.writeFloatLE(value, this.offset);
+    this.view.setFloat32(this.offset, value, true);
     this.offset += 4;
     return this;
   }
 
   /** Write 2 signed bytes to the current offset */
   public writeInt16BE(value: number) {
-    this.#buffer.writeInt16BE(value, this.offset);
+    this.view.setInt16(this.offset, value, false);
     this.offset += 2;
     return this;
   }
 
   /** Write 4 signed bytes to the current offset */
   public writeInt32BE(value: number) {
-    this.#buffer.writeInt32BE(value, this.offset);
+    this.view.setInt32(this.offset, value, false);
     this.offset += 4;
     return this;
   }
 
   /** Write 8 signed bytes to the current offset */
   public writeInt64BE(value: bigint) {
-    this.#buffer.writeBigInt64BE(value, this.offset);
+    this.view.setBigInt64(this.offset, value, false);
     this.offset += 8;
     return this;
   }
 
   /** Write 1 unsigned byte to the current offset */
   public writeUInt8BE(value: number) {
-    this.#buffer.writeUInt8(value, this.offset);
+    this.view.setUint8(this.offset, value);
     this.offset += 1;
     return this;
   }
 
   /** Write 2 unsigned bytes to the current offset */
   public writeUInt16BE(value: number) {
-    this.#buffer.writeUInt16BE(value, this.offset);
+    this.view.setUint16(this.offset, value, false);
     this.offset += 2;
     return this;
   }
 
   /** Write 4 unsigned bytes to the current offset */
   public writeUInt32BE(value: number) {
-    this.#buffer.writeUInt32BE(value, this.offset);
+    this.view.setUint32(this.offset, value, false);
     this.offset += 4;
     return this;
   }
 
   /** Write 8 unsigned bytes to the current offset */
   public writeUInt64BE(value: bigint) {
-    this.#buffer.writeBigUInt64BE(value, this.offset);
+    this.view.setBigUint64(this.offset, value, false);
     this.offset += 8;
     return this;
   }
 
   /** Write 8 unsigned bytes to the current offset */
   public writeDoubleBE(value: number) {
-    this.#buffer.writeDoubleBE(value, this.offset);
+    this.view.setFloat64(this.offset, value, false);
     this.offset += 8;
     return this;
   }
 
   /** Write 4 unsigned bytes to the current offset */
   public writeFloatBE(value: number) {
-    this.#buffer.writeFloatBE(value, this.offset);
+    this.view.setFloat32(this.offset, value, false);
     this.offset += 4;
     return this;
   }
 
   /** Write any number bytes as a string to the current offset */
-  public writeString(value: string, encoding: BufferEncoding = 'utf-8') {
-    this.#buffer.write(value, this.offset, value.length, encoding);
-    this.offset += value.length;
-    return value;
+  public writeString(text: string) {
+    for (let i = 0; i < text.length; i++) {
+      this.view.setUint8(this.offset++, text.charCodeAt(i));
+    }
+    return this;
   }
 
   // Helpers
@@ -326,33 +315,43 @@ export default class Packet {
     return this;
   }
 
-  public changeSize(size: number) {
-    const growth = Buffer.alloc(size);
-    this.#buffer.copy(growth, 0, 0, Math.min(this.#buffer.length, growth.length));
-    this.#buffer = growth;
-    return this;
-  }
-
-  public grow(by: number) {
-    return this.changeSize(this.#buffer.length + by);
-  }
-
-  public shrink(by: number) {
-    return this.changeSize(this.#buffer.length - by);
-  }
-
-  public get length() {
-    return this.#buffer.length;
-  }
-
   public get byteLength() {
-    return this.#buffer.byteLength;
+    return this.view.byteLength;
   }
 
-  /** Return a copy of the underlying buffer of the packet */
-  public toBuffer() {
-    const clone = Buffer.alloc(this.#buffer.length);
-    this.#buffer.copy(clone, 0, 0, clone.length);
-    return clone;
+  /** Return a copy of the underlying packet */
+  public toDataView(byteOffset?: number, byteLength?: number) {
+    const clone = this.buffer.slice(0);
+    const view = new DataView(clone, byteOffset, byteLength);
+    return view;
+  }
+
+  /** Get a hex dump of the packet */
+  public toString() {
+    let text = '';
+
+    for (let lineIndex = 0; lineIndex < this.view.byteLength; lineIndex += 16) {
+      text += lineIndex.toString(16).padStart(8, '0');
+
+      for (let i = lineIndex; i < lineIndex + 16; i++) {
+        text += i % 8 === 0 ? '  ' : ' ';
+        text += i < this.view.byteLength ? this.view.getUint8(i).toString(16).padStart(2, '0') : '  ';
+      }
+
+      text += '  | ';
+
+      for (let i = lineIndex; i < lineIndex + 16; i++) {
+        if (i < this.view.byteLength) {
+          const value = this.view.getUint8(i);
+          text += value < 32 || value > 126 ? '.' : String.fromCharCode(value);
+        } else {
+          text += ' ';
+        }
+      }
+
+      text += ' |\n';
+    }
+
+    return text.trimRight();
   }
 }

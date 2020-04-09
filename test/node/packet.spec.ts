@@ -1,6 +1,6 @@
-import Packet from './packet';
+import Packet from '../../dist/packet';
 
-describe('Packet', () => {
+describe('Node', () => {
   it('keeps track of offset as data is read', () => {
     const packet = Packet.alloc(52);
     expect(packet.offset).toBe(0);
@@ -84,4 +84,23 @@ describe('Packet', () => {
     packet.skip(10);
     expect(packet.offset).toBe(10);
   });
+
+  it('supports node buffers', () => {
+    const packet = new Packet(new Buffer(10).buffer);
+    expect(packet.byteLength).toBe(10);
+  });
+
+  it('returns a hex dump of the packet', () => {
+    const packet = new Packet(23);
+    packet.writeUInt16BE(42);
+    packet.writeUInt32BE(420);
+    packet.writeUInt16BE(69);
+    packet.writeUInt16BE(101);
+    packet.writeString('hello world');
+
+    const dump = packet.toString();
+
+    expect(dump).toBe(`00000000  00 2a 00 00 01 a4 00 45  00 65 68 65 6c 6c 6f 20  | .*.....E.ehello  |
+00000010  77 6f 72 6c 64 00 00                              | world..          |`)
+  })
 });
