@@ -1,0 +1,6 @@
+{
+  "preset": "jest-puppeteer",
+  "testRegex": [
+    "/test/browser/.*\\.spec\\.ts$"
+  ]
+}

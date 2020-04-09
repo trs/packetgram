@@ -5,8 +5,12 @@
   "main": "dist/packet.js",
   "types": "dist/packet.d.ts",
   "scripts": {
-    "test": "jest",
-    "build": "tsc -d",
+    "test": "npm run test:node && npm run test:browser",
+    "pretest:browser": "npm run build",
+    "test:browser": "jest --runInBand --config jest.config.browser.json",
+    "pretest:node": "npm run build",
+    "test:node": "jest --runInBand --config jest.config.node.json",
+    "build": "webpack",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -20,15 +24,20 @@
     "url": "https://tylerstewart.ca"
   },
   "license": "MIT",
-  "jest": {
-    "preset": "ts-jest"
-  },
   "devDependencies": {
+    "@types/expect-puppeteer": "^4.4.1",
     "@types/jest": "^25.2.1",
+    "@types/jest-environment-puppeteer": "^4.3.1",
     "@types/node": "^13.11.1",
+    "@types/puppeteer": "^2.0.1",
     "jest": "^25.3.0",
+    "jest-puppeteer": "^4.4.0",
+    "puppeteer": "^2.1.1",
     "semantic-release": "^17.0.4",
     "ts-jest": "^25.3.1",
-    "typescript": "^3.8.3"
+    "ts-loader": "^6.2.2",
+    "typescript": "^3.8.3",
+    "webpack": "^4.42.1",
+    "webpack-cli": "^3.3.11"
   }
 }

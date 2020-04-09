@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+  </head>
+  <body>
+    <h1>Packet</h1>
+    <code id="packet"></code>
+
+    <script src="../../dist/packet.js"></script>
+    <script>
+      const packet = new Packet(12);
+      packet.writeString('Hello World!');
+
+      document.getElementById('packet').innerText = packet.toString();
+    </script>
+    <!-- <script type="module">
+      import Packet from '../../dist/packet.js';
+
+      const packet = new Packet(12);
+      packet.writeString('Hello World!');
+
+      document.getElementById('packet').innerText = packet.toString();
+    </script> -->
+  </body>
+</html>
