@@ -4,9 +4,11 @@ export default class Packet {
 
   public offset: number = 0;
 
-  public constructor(size: number)
-  public constructor(data: ArrayBuffer | SharedArrayBuffer, offset?: number, length?: number)
-  public constructor(data: number | ArrayBuffer | SharedArrayBuffer, offset?: number, length?: number) {
+  public constructor(size?: number)
+  public constructor(data?: ArrayBuffer | SharedArrayBuffer, offset?: number, length?: number)
+  public constructor(data?: number | ArrayBuffer | SharedArrayBuffer, offset?: number, length?: number) {
+    if (typeof data === 'undefined') data = 0;
+
     if (typeof data === 'number') {
       this.buffer = new ArrayBuffer(data);
     } else {
@@ -18,7 +20,7 @@ export default class Packet {
   // Static
 
   /** Allocate a new buffer with the given size. */
-  public static alloc(size: number) {
+  public static alloc(size?: number) {
     return new Packet(size);
   }
 
@@ -164,7 +166,7 @@ export default class Packet {
     return value;
   }
 
-  // Write LE
+  // Write
 
   /** Write 1 signed byte to the current offset */
   public writeSByte(value: number) {
@@ -307,7 +309,137 @@ export default class Packet {
     return this;
   }
 
+  // Append
+
+  /** Append 1 signed byte to the current offset */
+  public appendSByte(value: number) {
+    this.grow(1);
+    return this.writeSByte(value);
+  }
+
+  /** Append 2 signed bytes to the current offset */
+  public appendInt16LE(value: number) {
+    this.grow(2);
+    return this.writeInt16LE(value);
+  }
+
+  /** Append 4 signed bytes to the current offset */
+  public appendInt32LE(value: number) {
+    this.grow(4);
+    return this.writeInt32LE(value);
+  }
+
+  /** Append 8 signed bytes to the current offset */
+  public appendInt64LE(value: bigint) {
+    this.grow(8);
+    return this.writeInt64LE(value);
+  }
+
+  /** Append 1 signed byte to the current offset */
+  public appendByte(value: number) {
+    this.grow(1);
+    return this.writeByte(value);
+  }
+
+  /** Append 2 signed bytes to the current offset */
+  public appendUInt16LE(value: number) {
+    this.grow(2);
+    return this.writeUInt16LE(value);
+  }
+
+  /** Append 4 signed bytes to the current offset */
+  public appendUInt32LE(value: number) {
+    this.grow(4);
+    return this.writeUInt32LE(value);
+  }
+
+  /** Append 8 signed bytes to the current offset */
+  public appendUInt64LE(value: bigint) {
+    this.grow(8);
+    return this.writeUInt64LE(value);
+  }
+
+  /** Append 8 signed bytes to the current offset */
+  public appendDoubleLE(value: number) {
+    this.grow(8);
+    return this.writeDoubleLE(value);
+  }
+
+  /** Append 4 signed bytes to the current offset */
+  public appendFloatLE(value: number) {
+    this.grow(4);
+    return this.writeFloatLE(value);
+  }
+
+  /** Append 2 signed bytes to the current offset */
+  public appendInt16BE(value: number) {
+    this.grow(2);
+    return this.writeInt16BE(value);
+  }
+
+  /** Append 4 signed bytes to the current offset */
+  public appendInt32BE(value: number) {
+    this.grow(4);
+    return this.writeInt32BE(value);
+  }
+
+  /** Append 8 signed bytes to the current offset */
+  public appendInt64BE(value: bigint) {
+    this.grow(8);
+    return this.writeInt64BE(value);
+  }
+
+  /** Append 2 signed bytes to the current offset */
+  public appendUInt16BE(value: number) {
+    this.grow(2);
+    return this.writeUInt16BE(value);
+  }
+
+  /** Append 4 signed bytes to the current offset */
+  public appendUInt32BE(value: number) {
+    this.grow(4);
+    return this.writeUInt32BE(value);
+  }
+
+  /** Append 8 signed bytes to the current offset */
+  public appendUInt64BE(value: bigint) {
+    this.grow(8);
+    return this.writeUInt64BE(value);
+  }
+
+  /** Append 8 signed bytes to the current offset */
+  public appendDoubleBE(value: number) {
+    this.grow(8);
+    return this.writeDoubleBE(value);
+  }
+
+  /** Append 4 signed bytes to the current offset */
+  public appendFloatBE(value: number) {
+    this.grow(4);
+    return this.writeFloatBE(value);
+  }
+
+  /** Append any number bytes as a string to the current offset */
+  public appendString(text: string) {
+    this.grow(text.length);
+    return this.writeString(text);
+  }
+
   // Helpers
+
+  public grow(by: number) {
+    if (this.offset + by >= this.byteLength) {
+      const newBuffer = new ArrayBuffer(this.offset + by);
+      const newView = new DataView(newBuffer);
+
+      for (let i = 0; i < this.byteLength; i++) {
+        newView.setUint8(i, this.view.getUint8(i));
+      }
+
+      this.buffer = newBuffer;
+      this.view = newView;
+    }
+  }
 
   /** Increment of the offset by the given count */
   public skip(count: number) {

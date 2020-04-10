@@ -9,18 +9,11 @@
 
     <script src="../../dist/packet.js"></script>
     <script>
-      const packet = new Packet(12);
-      packet.writeString('Hello World!');
+      const packet = new Packet(5);
+      packet.writeString('Hello');
+      packet.appendString(' World!');
 
       document.getElementById('packet').innerText = packet.toString();
     </script>
-    <!-- <script type="module">
-      import Packet from '../../dist/packet.js';
-
-      const packet = new Packet(12);
-      packet.writeString('Hello World!');
-
-      document.getElementById('packet').innerText = packet.toString();
-    </script> -->
   </body>
 </html>

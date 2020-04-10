@@ -11,7 +11,6 @@
     "test": "npm run test:node && npm run test:browser",
     "pretest:browser": "npm run build",
     "test:browser": "jest --runInBand --config jest.config.browser.json",
-    "pretest:node": "npm run build",
     "test:node": "jest --runInBand --config jest.config.node.json",
     "build": "webpack",
     "prepublishOnly": "npm run build"
