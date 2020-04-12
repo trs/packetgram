@@ -12,7 +12,7 @@
     "pretest:browser": "npm run build",
     "test:browser": "jest --runInBand --config jest.config.browser.json",
     "test:node": "jest --runInBand --config jest.config.node.json",
-    "build": "webpack",
+    "build": "tsc -d && webpack",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

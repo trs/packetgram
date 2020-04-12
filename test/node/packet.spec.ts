@@ -1,4 +1,4 @@
-import Packet from '../../src/packet';
+import Packet from '../../dist/packet';
 
 describe('Node', () => {
   it('keeps track of offset as data is read', () => {

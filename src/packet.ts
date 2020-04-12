@@ -5,8 +5,8 @@ export default class Packet {
   public offset: number = 0;
 
   public constructor(size?: number)
-  public constructor(data?: ArrayBuffer | SharedArrayBuffer, offset?: number, length?: number)
-  public constructor(data?: number | ArrayBuffer | SharedArrayBuffer, offset?: number, length?: number) {
+  public constructor(data?: ArrayBuffer, offset?: number, length?: number)
+  public constructor(data?: number | ArrayBuffer, offset?: number, length?: number) {
     if (typeof data === 'undefined') data = 0;
 
     if (typeof data === 'number') {
@@ -24,7 +24,7 @@ export default class Packet {
     return new Packet(size);
   }
 
-  public static from(data: ArrayBuffer | SharedArrayBuffer) {
+  public static from(data: ArrayBuffer) {
     return new Packet(data);
   }
 
@@ -157,7 +157,7 @@ export default class Packet {
   }
 
   /** Read any number of bytes from the current offset as a string */
-  public readString(length: number, encoding?: BufferEncoding) {
+  public readString(length: number, encoding?: string) {
     let value = '';
     for (let i = 0; i < length; i++) {
       value += String.fromCharCode(this.view.getUint8(this.offset + i));
