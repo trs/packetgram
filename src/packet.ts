@@ -28,6 +28,45 @@ export default class Packet {
     return new Packet(data);
   }
 
+  public static encode(packet: Packet): string {
+    const bytes = new Uint8Array(packet.buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    
+    // Use btoa in browser, Buffer in Node.js
+    if (typeof btoa !== 'undefined') {
+      return btoa(binary);
+    } else if (typeof Buffer !== 'undefined') {
+      return Buffer.from(bytes).toString('base64');
+    } else {
+      throw new Error('Base64 encoding not available in this environment');
+    }
+  }
+
+  public static decode(base64: string): Packet {
+    let bytes: Uint8Array;
+    
+    // Use atob in browser, Buffer in Node.js
+    if (typeof atob !== 'undefined') {
+      const binary = atob(base64);
+      bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+    } else if (typeof Buffer !== 'undefined') {
+      bytes = new Uint8Array(Buffer.from(base64, 'base64'));
+    } else {
+      throw new Error('Base64 decoding not available in this environment');
+    }
+    
+    // Create a new ArrayBuffer to ensure type compatibility
+    const buffer = new ArrayBuffer(bytes.length);
+    new Uint8Array(buffer).set(bytes);
+    return new Packet(buffer);
+  }
+
   // Read
 
   /** Read 1 byte from the current offset as a signed number */

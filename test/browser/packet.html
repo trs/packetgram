@@ -7,6 +7,8 @@
     <h1>Packet</h1>
     <code id="packet"></code>
 
+    <code id="packet-encoded"></code>
+
     <script src="../../dist/packet.js"></script>
     <script>
       const packet = new Packet(5);
@@ -14,6 +16,8 @@
       packet.appendString(' World!');
 
       document.getElementById('packet').innerText = packet.toString();
+
+      document.getElementById('packet-encoded').innerText = Packet.encode(packet);
     </script>
   </body>
 </html>

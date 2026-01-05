@@ -127,4 +127,18 @@ describe('Node', () => {
     expect(dump).toBe(`00000000  00 2a 00 00 01 a4 00 45  00 65 68 65 6c 6c 6f 20  | .*.....E.ehello  |
 00000010  77 6f 72 6c 64 00 00                              | world..          |`)
   });
+
+  it('encodes and decodes a packet', () => {
+    const packet = new Packet(5);
+    packet.writeString('Hello');
+    packet.appendString(' World!');
+
+    const encoded = Packet.encode(packet);
+    const decoded = Packet.decode(encoded);
+
+    expect(decoded.toString()).toBe(packet.toString());
+    expect(decoded.byteLength).toBe(packet.byteLength);
+
+    expect(decoded.toDataView()).toEqual(packet.toDataView());
+  });
 });
