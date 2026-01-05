@@ -10,9 +10,9 @@
   "scripts": {
     "test": "npm run test:node && npm run test:browser",
     "pretest:browser": "npm run build",
-    "test:browser": "jest --runInBand --config jest.config.browser.json",
-    "test:node": "jest --runInBand --config jest.config.node.json",
-    "build": "tsc -d && webpack",
+    "test:browser": "vitest run --config vitest.browser.config.ts",
+    "test:node": "vitest run",
+    "build": "tsc -d && vite build",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -27,19 +27,12 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@types/expect-puppeteer": "^4.4.1",
-    "@types/jest": "^25.2.1",
-    "@types/jest-environment-puppeteer": "^4.3.1",
-    "@types/node": "^13.11.1",
-    "@types/puppeteer": "^2.0.1",
-    "jest": "^25.3.0",
-    "jest-puppeteer": "^4.4.0",
-    "puppeteer": "^2.1.1",
-    "semantic-release": "^17.0.4",
-    "ts-jest": "^25.3.1",
-    "ts-loader": "^9.5.1",
-    "typescript": "^3.8.3",
-    "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.4"
+    "@types/node": "^25.0.3",
+    "@types/puppeteer": "^7.0.4",
+    "puppeteer": "^24.34.0",
+    "semantic-release": "^25.0.2",
+    "typescript": "^5.9.3",
+    "vite": "^6.0.5",
+    "vitest": "^2.1.8"
   }
 }

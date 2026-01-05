@@ -34,14 +34,14 @@ const packet = Packet.from(buffer);
 ```javascript
 const packet = Packet.alloc(20);
 
-// Write various data types (little-endian by default)
-packet.writeUInt32LE(42);
+// Write various data types (big-endian by default)
+packet.writeUInt32(42);
 packet.writeString('Hello');
-packet.writeFloatLE(3.14);
+packet.writeFloat(3.14);
 
 // Or use append methods that automatically grow the buffer
 const dynamicPacket = new Packet(5);
-dynamicPacket.appendUInt32LE(100);
+dynamicPacket.appendUInt32(100);
 dynamicPacket.appendString(' World!');
 ```
 
@@ -49,14 +49,14 @@ dynamicPacket.appendString(' World!');
 
 ```javascript
 const packet = Packet.alloc(20);
-packet.writeUInt32LE(42);
+packet.writeUInt32(42);
 packet.writeString('Hello');
 
 // Reset offset to read from the beginning
 packet.offset = 0;
 
-const number = packet.readUInt32LE();  // 42
-const text = packet.readString(5);     // 'Hello'
+const number = packet.readUInt32();  // 42
+const text = packet.readString(5);   // 'Hello'
 ```
 
 ### Encoding/Decoding
@@ -72,12 +72,30 @@ const encoded = Packet.encode(packet);
 const decoded = Packet.decode(encoded);
 ```
 
+### Endianness
+
+```javascript
+const packet = Packet.alloc(20);
+
+// Default is big-endian (BE)
+packet.writeUInt16(42);
+packet.writeUInt32(420);
+
+// Switch to little-endian
+packet.useEndianness('LE');
+packet.writeUInt16(42);
+packet.writeUInt32(420);
+
+// Switch back to big-endian
+packet.useEndianness('BE');
+```
+
 ### Dumping Packet Contents
 
 ```javascript
 const packet = Packet.alloc(20);
-packet.writeUInt16BE(42);
-packet.writeUInt32BE(420);
+packet.writeUInt16(42);
+packet.writeUInt32(420);
 packet.writeString('hello');
 
 // Get a hex dump of the packet

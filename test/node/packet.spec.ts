@@ -1,4 +1,6 @@
-import Packet from '../../dist/packet';
+import { describe, it, expect } from 'vitest';
+
+import Packet from '../../src/packet';
 
 describe('Node', () => {
   it('keeps track of offset as data is read', () => {
@@ -11,28 +13,28 @@ describe('Node', () => {
     packet.readByte();
     expect(packet.offset).toBe(2);
 
-    packet.readInt16BE();
+    packet.readInt16();
     expect(packet.offset).toBe(4);
 
-    packet.readUInt16BE();
+    packet.readUInt16();
     expect(packet.offset).toBe(6);
 
-    packet.readInt32BE();
+    packet.readInt32();
     expect(packet.offset).toBe(10);
 
-    packet.readUInt32BE();
+    packet.readUInt32();
     expect(packet.offset).toBe(14);
 
-    packet.readInt64BE();
+    packet.readInt64();
     expect(packet.offset).toBe(22);
 
-    packet.readUInt64BE();
+    packet.readUInt64();
     expect(packet.offset).toBe(30);
 
-    packet.readFloatBE();
+    packet.readFloat();
     expect(packet.offset).toBe(34);
 
-    packet.readDoubleBE();
+    packet.readDouble();
     expect(packet.offset).toBe(42);
 
     packet.readString(10);
@@ -49,28 +51,28 @@ describe('Node', () => {
     packet.writeByte(0);
     expect(packet.offset).toBe(2);
 
-    packet.writeInt16BE(0);
+    packet.writeInt16(0);
     expect(packet.offset).toBe(4);
 
-    packet.writeUInt16BE(0);
+    packet.writeUInt16(0);
     expect(packet.offset).toBe(6);
 
-    packet.writeInt32BE(0);
+    packet.writeInt32(0);
     expect(packet.offset).toBe(10);
 
-    packet.writeUInt32BE(0);
+    packet.writeUInt32(0);
     expect(packet.offset).toBe(14);
 
-    packet.writeInt64BE(BigInt(0));
+    packet.writeInt64(BigInt(0));
     expect(packet.offset).toBe(22);
 
-    packet.writeUInt64BE(BigInt(0));
+    packet.writeUInt64(BigInt(0));
     expect(packet.offset).toBe(30);
 
-    packet.writeFloatBE(0);
+    packet.writeFloat(0);
     expect(packet.offset).toBe(34);
 
-    packet.writeDoubleBE(0);
+    packet.writeDouble(0);
     expect(packet.offset).toBe(42);
 
     packet.writeString('helloworld');
@@ -86,18 +88,18 @@ describe('Node', () => {
   });
 
   it('supports node buffers', () => {
-    const packet = new Packet(new Buffer(10).buffer);
+    const packet = new Packet(Buffer.alloc(10).buffer);
     expect(packet.byteLength).toBe(10);
   });
 
   it('grows to make room', () => {
-    const packet = new Packet(5);
+    const packet = new Packet(5).useEndianness('LE');
     packet.appendSByte(-1);
     packet.appendByte(1);
-    packet.appendInt16LE(-2);
-    packet.appendUInt16LE(2);
-    packet.appendInt32LE(-3);
-    packet.appendUInt32LE(3);
+    packet.appendInt16(-2);
+    packet.appendUInt16(2);
+    packet.appendInt32(-3);
+    packet.appendUInt32(3);
     packet.appendString('Hi')
 
     expect(packet.offset).toBe(16);
@@ -107,19 +109,19 @@ describe('Node', () => {
 
     expect(packet.readSByte()).toBe(-1);
     expect(packet.readByte()).toBe(1);
-    expect(packet.readInt16LE()).toBe(-2);
-    expect(packet.readUInt16LE()).toBe(2);
-    expect(packet.readInt32LE()).toBe(-3);
-    expect(packet.readUInt32LE()).toBe(3);
+    expect(packet.readInt16()).toBe(-2);
+    expect(packet.readUInt16()).toBe(2);
+    expect(packet.readInt32()).toBe(-3);
+    expect(packet.readUInt32()).toBe(3);
     expect(packet.readString(2)).toBe('Hi');
   })
 
   it('returns a hex dump of the packet', () => {
     const packet = new Packet(23);
-    packet.writeUInt16BE(42);
-    packet.writeUInt32BE(420);
-    packet.writeUInt16BE(69);
-    packet.writeUInt16BE(101);
+    packet.writeUInt16(42);
+    packet.writeUInt32(420);
+    packet.writeUInt16(69);
+    packet.writeUInt16(101);
     packet.writeString('hello world');
 
     const dump = packet.toString();
