@@ -5,9 +5,12 @@ module.exports = {
     packet: "./src/packet"
   },
   output: {
-    library: "Packet",
-    libraryExport: "default",
-    libraryTarget: "umd",
+    path: require("path").resolve(__dirname, "dist"),
+    library: {
+      name: "Packet",
+      export: "default",
+      type: "umd"
+    },
     globalObject: 'this',
     filename: "[name].js"
   },

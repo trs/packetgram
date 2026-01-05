@@ -9,6 +9,7 @@
       "ES5"
     ],
     "noImplicitAny": true,
+    "skipLibCheck": true,
     "moduleResolution": "node",
     "sourceMap": false,
     "outDir": "dist",
