@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "NodeNext",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "target": "ES5",
@@ -10,7 +10,7 @@
     ],
     "noImplicitAny": true,
     "skipLibCheck": true,
-    "moduleResolution": "node",
+    "moduleResolution": "NodeNext",
     "sourceMap": false,
     "outDir": "dist",
     "baseUrl": ".",
