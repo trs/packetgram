@@ -2,6 +2,7 @@
   "name": "packetgram",
   "version": "0.1.0",
   "description": "Read and write packets using buffers",
+  "type": "module",
   "main": "dist/packet.js",
   "types": "dist/packet.d.ts",
   "files": [
