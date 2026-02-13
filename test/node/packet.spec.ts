@@ -41,6 +41,28 @@ describe('Node', () => {
     expect(packet.offset).toBe(52);
   });
 
+  it('readBytes returns bytes and advances offset', () => {
+    const packet = Packet.alloc(6);
+    packet.writeByte(0x01);
+    packet.writeByte(0x02);
+    packet.writeByte(0x03);
+    packet.writeByte(0x04);
+    packet.writeByte(0x05);
+    packet.writeByte(0x06);
+    packet.offset = 0;
+
+    const first = packet.readBytes(3);
+    expect(first).toBeInstanceOf(Uint8Array);
+    expect(first.length).toBe(3);
+    expect(Array.from(first)).toEqual([0x01, 0x02, 0x03]);
+    expect(packet.offset).toBe(3);
+
+    const second = packet.readBytes(3);
+    expect(second.length).toBe(3);
+    expect(Array.from(second)).toEqual([0x04, 0x05, 0x06]);
+    expect(packet.offset).toBe(6);
+  });
+
   it('keeps track of offset as data is written', () => {
     const packet = Packet.alloc(52);
     expect(packet.offset).toBe(0);

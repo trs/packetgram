@@ -165,13 +165,19 @@ export default class Packet {
   }
 
   /** Read any number of bytes from the current offset as a string */
-  public readString(length: number, encoding?: string) {
+  public readString(length: number) {
     const chars: string[] = new Array(length);
     for (let i = 0; i < length; i++) {
       chars[i] = String.fromCharCode(this.bytes[this.offset + i]);
     }
     this.offset += length;
     return chars.join('');
+  }
+
+  public readBytes(length: number): Uint8Array {
+    const bytes = this.bytes.subarray(this.offset, this.offset + length);
+    this.offset += length;
+    return bytes;
   }
 
   // Write
