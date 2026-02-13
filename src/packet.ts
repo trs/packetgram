@@ -356,8 +356,18 @@ export default class Packet {
   }
 
   /** Increment of the offset by the given count */
-  public skip(count: number) {
-    this.offset += count;
+  public skip(count: number, origin: 'begin' | 'current' | 'end' = 'current') {
+    switch (origin) {
+      case 'begin':
+        this.offset = count;
+        break;
+      case 'current':
+        this.offset += count;
+        break;
+      case 'end':
+        this.offset = this.bytes.length - count;
+        break;
+    }
     return this;
   }
 

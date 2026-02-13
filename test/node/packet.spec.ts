@@ -105,10 +105,19 @@ describe('Node', () => {
     const packet = Packet.alloc(10);
     expect(packet.offset).toBe(0);
 
-    packet.skip(10);
-    expect(packet.offset).toBe(10);
-  });
+    packet.skip(1);
+    expect(packet.offset).toBe(1);
 
+    packet.skip(2, 'current');
+    expect(packet.offset).toBe(3);
+
+    packet.skip(1, 'begin');
+    expect(packet.offset).toBe(1);
+
+    packet.skip(1, 'end');
+    expect(packet.offset).toBe(9);
+  });
+  
   it('supports node buffers', () => {
     const packet = new Packet(Buffer.alloc(10).buffer);
     expect(packet.byteLength).toBe(10);
