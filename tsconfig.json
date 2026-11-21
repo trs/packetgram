@@ -13,11 +13,7 @@
     "moduleResolution": "NodeNext",
     "declaration": true,
     "sourceMap": false,
-    "outDir": "dist",
-    "baseUrl": ".",
-    "paths": {
-      "~/*": ["src/*"]
-    }
+    "outDir": "dist"
   },
   "include": [
     "src/**/*"

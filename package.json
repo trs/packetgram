@@ -7,20 +7,32 @@
   "types": "dist/packet.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/packet.d.ts",
-      "import": "./dist/packet.js",
-      "require": "./dist/packet.umd.cjs"
-    }
+      "import": {
+        "types": "./dist/packet.d.ts",
+        "default": "./dist/packet.js"
+      },
+      "require": {
+        "types": "./dist/packet.d.cts",
+        "default": "./dist/packet.umd.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
   "scripts": {
-    "test": "npm run test:node && npm run test:browser",
+    "test": "npm run test:node && npm run test:browser && npm run test:package",
     "pretest:browser": "npm run build",
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "test:node": "vitest run",
-    "build": "vite build && tsc --emitDeclarationOnly",
+    "test:package": "tsc -p test/package && node test/package/out/consumer.cjs && node test/package/out/consumer.mjs",
+    "build": "vite build && tsc --emitDeclarationOnly && node scripts/build-cts.mjs",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
