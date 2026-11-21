@@ -1,18 +1,18 @@
-name: Release
-
-permissions:
-  id-token: write
-  contents: write
+name: CI
 
 on:
   push:
     branches:
     - master
+  pull_request:
 
 jobs:
-  build:
+  test:
 
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
 
     steps:
     - uses: actions/checkout@v4
@@ -25,6 +25,26 @@ jobs:
       run: yarn install --immutable
     - name: Test
       run: yarn test
+
+  release:
+
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+    - name: Enable Corepack
+      run: corepack enable
+    - name: Install
+      run: yarn install --immutable
     - name: Release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
