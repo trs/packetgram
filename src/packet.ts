@@ -1,3 +1,9 @@
+export type StringEncoding = 'latin1' | 'utf8';
+
+const utf8Encoder = new TextEncoder();
+// fatal: invalid UTF-8 throws instead of silently becoming U+FFFD
+const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+
 export default class Packet {
   private bytes: Uint8Array;
   private view: DataView;
@@ -6,30 +12,57 @@ export default class Packet {
   public offset: number = 0;
 
   public constructor(size?: number)
-  public constructor(data: ArrayBuffer, offset?: number, length?: number)
-  public constructor(dataOrSize?: number | ArrayBuffer, offset?: number, length?: number) {
+  public constructor(data: ArrayBufferLike | ArrayBufferView, offset?: number, length?: number)
+  public constructor(dataOrSize?: number | ArrayBufferLike | ArrayBufferView, offset?: number, length?: number) {
     if (typeof dataOrSize === 'undefined') {
       this.bytes = new Uint8Array(0);
     } else if (typeof dataOrSize === 'number') {
       this.bytes = new Uint8Array(dataOrSize);
     } else {
+      // Views (Uint8Array, Node Buffer, DataView, ...) only cover part of their buffer,
+      // so respect their byteOffset/byteLength. `offset` and `length` are relative to the view.
+      const source = ArrayBuffer.isView(dataOrSize)
+        ? new Uint8Array(dataOrSize.buffer, dataOrSize.byteOffset, dataOrSize.byteLength)
+        : new Uint8Array(dataOrSize);
       const start = offset ?? 0;
       const end = length !== undefined ? start + length : undefined;
-      const buffer = dataOrSize.slice(start, end);
-      this.bytes = new Uint8Array(buffer);
+      // slice() copies, so the packet never shares memory with the caller
+      this.bytes = source.slice(start, end);
     }
     this.view = new DataView(this.bytes.buffer, this.bytes.byteOffset, this.bytes.byteLength);
   }
 
   // Static
 
+  /** Number of bytes `text` takes in the given encoding (useful for length prefixes) */
+  public static byteLength(text: string, encoding: StringEncoding = 'latin1') {
+    return encoding === 'utf8' ? utf8Encoder.encode(text).length : text.length;
+  }
+
+  private static encodeString(text: string, encoding: StringEncoding): Uint8Array {
+    if (encoding === 'utf8') return utf8Encoder.encode(text);
+
+    const bytes = new Uint8Array(text.length);
+    for (let i = 0; i < text.length; i++) {
+      const code = text.charCodeAt(i);
+      if (code > 0xff) {
+        throw new RangeError(
+          `Character U+${code.toString(16).padStart(4, '0')} at index ${i} is not representable in latin1`
+        );
+      }
+      bytes[i] = code;
+    }
+    return bytes;
+  }
+
   /** Allocate a new buffer with the given size. */
   public static alloc(size?: number) {
     return new Packet(size);
   }
 
-  public static from(data: ArrayBuffer) {
-    return new Packet(data);
+  /** Create a packet from a copy of the given buffer or view. */
+  public static from(data: ArrayBufferLike | ArrayBufferView, offset?: number, length?: number) {
+    return new Packet(data, offset, length);
   }
 
   public static encode(packet: Packet): string {
@@ -80,16 +113,13 @@ export default class Packet {
       }
     } else if (typeof Buffer !== 'undefined') {
       const buffer = Buffer.from(base64, 'base64');
-      // Directly use the buffer's underlying ArrayBuffer if available
       bytes = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
     } else {
       throw new Error('Base64 decoding not available in this environment');
     }
-    
-    // Create a new ArrayBuffer to ensure type compatibility
-    const buffer = new ArrayBuffer(bytes.length);
-    new Uint8Array(buffer).set(bytes);
-    return new Packet(buffer);
+
+    // The constructor copies the requested range, so no intermediate copy is needed
+    return new Packet(bytes);
   }
 
   // Read
@@ -164,18 +194,30 @@ export default class Packet {
     return value;
   }
 
-  /** Read any number of bytes from the current offset as a string */
-  public readString(length: number) {
-    const chars: string[] = new Array(length);
-    for (let i = 0; i < length; i++) {
-      chars[i] = String.fromCharCode(this.bytes[this.offset + i]);
+  /** Read `length` bytes (not characters) from the current offset as a string */
+  public readString(length: number, encoding: StringEncoding = 'latin1') {
+    this.checkBounds(length);
+    const bytes = this.bytes.subarray(this.offset, this.offset + length);
+
+    let text: string;
+    if (encoding === 'utf8') {
+      text = utf8Decoder.decode(bytes);
+    } else {
+      const chars: string[] = new Array(length);
+      for (let i = 0; i < length; i++) {
+        chars[i] = String.fromCharCode(bytes[i]);
+      }
+      text = chars.join('');
     }
+
     this.offset += length;
-    return chars.join('');
+    return text;
   }
 
+  /** Read any number of bytes from the current offset as a copy */
   public readBytes(length: number): Uint8Array {
-    const bytes = this.bytes.subarray(this.offset, this.offset + length);
+    this.checkBounds(length);
+    const bytes = this.bytes.slice(this.offset, this.offset + length);
     this.offset += length;
     return bytes;
   }
@@ -252,12 +294,17 @@ export default class Packet {
     return this;
   }
 
-  /** Write any number bytes as a string to the current offset */
-  public writeString(text: string) {
-    for (let i = 0; i < text.length; i++) {
-      this.bytes[this.offset++] = text.charCodeAt(i);
-    }
+  /** Write raw bytes to the current offset */
+  public writeBytes(bytes: Uint8Array) {
+    this.checkBounds(bytes.length);
+    this.bytes.set(bytes, this.offset);
+    this.offset += bytes.length;
     return this;
+  }
+
+  /** Write a string to the current offset */
+  public writeString(text: string, encoding: StringEncoding = 'latin1') {
+    return this.writeBytes(Packet.encodeString(text, encoding));
   }
 
   // Append
@@ -322,22 +369,37 @@ export default class Packet {
     return this.writeFloat(value);
   }
 
-  /** Append any number bytes as a string to the current offset */
-  public appendString(text: string) {
-    this.grow(text.length);
-    return this.writeString(text);
+  /** Append raw bytes to the current offset */
+  public appendBytes(bytes: Uint8Array) {
+    this.grow(bytes.length);
+    return this.writeBytes(bytes);
+  }
+
+  /** Append a string to the current offset, growing by its encoded byte length */
+  public appendString(text: string, encoding: StringEncoding = 'latin1') {
+    return this.appendBytes(Packet.encodeString(text, encoding));
   }
 
   // Helpers
 
-  /** Set the packet to use little-endian byte order */
+  /** Set the byte order used by subsequent multi-byte reads and writes */
   public useEndianness(order: 'BE' | 'LE') {
     this.littleEndian = order === 'LE';
     return this;
   }
 
+  /** Throw a RangeError if `length` bytes at the current offset fall outside the packet */
+  private checkBounds(length: number) {
+    if (this.offset < 0 || length < 0 || this.offset + length > this.byteLength) {
+      throw new RangeError(
+        `Cannot access ${length} byte(s) at offset ${this.offset}; packet is ${this.byteLength} byte(s)`
+      );
+    }
+  }
+
+  /** Ensure there is room for `by` bytes at the current offset, enlarging the buffer if needed */
   public grow(by: number) {
-    if (this.offset + by >= this.byteLength) {
+    if (this.offset + by > this.byteLength) {
       const requiredSize = this.offset + by;
       // Use exponential growth to reduce reallocations for larger buffers
       // Only apply exponential growth if buffer is already > 128 bytes to avoid wasting memory
@@ -355,7 +417,7 @@ export default class Packet {
     }
   }
 
-  /** Increment of the offset by the given count */
+  /** Move the offset by `count`, relative to the beginning, the current offset, or the end */
   public skip(count: number, origin: 'begin' | 'current' | 'end' = 'current') {
     switch (origin) {
       case 'begin':
@@ -375,7 +437,7 @@ export default class Packet {
     return this.bytes.length;
   }
 
-  /** Return a copy of the underlying packet */
+  /** Return a DataView over a copy of the packet's bytes */
   public toDataView(byteOffset?: number, byteLength?: number) {
     const clone = this.bytes.buffer.slice(this.bytes.byteOffset, this.bytes.byteOffset + this.bytes.byteLength);
     const view = new DataView(clone, byteOffset, byteLength);

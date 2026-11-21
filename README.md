@@ -72,6 +72,29 @@ const encoded = Packet.encode(packet);
 const decoded = Packet.decode(encoded);
 ```
 
+### Strings and Bytes
+
+```javascript
+// Strings default to latin1 (1 byte per character, U+0000 to U+00FF).
+// Characters outside that range throw a RangeError instead of being truncated.
+const packet = new Packet();
+packet.appendString('héllo');
+
+// Use 'utf8' for any Unicode text. Lengths are always in bytes, not characters.
+const text = 'héllo €';
+const length = Packet.byteLength(text, 'utf8'); // 10
+packet.appendUInt16(length);
+packet.appendString(text, 'utf8');
+
+packet.offset = 5;
+packet.readString(packet.readUInt16(), 'utf8'); // 'héllo €'
+
+// Raw bytes (readBytes returns a copy)
+packet.appendBytes(new Uint8Array([1, 2, 3]));
+```
+
+Reading or writing past the end of the packet throws a `RangeError` and leaves the offset unchanged. Use the `append*` methods to grow the packet as you write.
+
 ### Endianness
 
 ```javascript

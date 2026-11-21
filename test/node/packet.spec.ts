@@ -123,6 +123,57 @@ describe('Node', () => {
     expect(packet.byteLength).toBe(10);
   });
 
+  it('respects the byte range of views, including pooled node buffers', () => {
+    // Buffer.from uses Node's shared 8 KB pool, so .buffer is much larger than the data
+    const pooled = Buffer.from([1, 2, 3]);
+    const packet = new Packet(pooled);
+    expect(packet.byteLength).toBe(3);
+    expect(Array.from(packet.readBytes(3))).toEqual([1, 2, 3]);
+
+    const fromView = Packet.from(new Uint8Array([9, 8, 7, 6]).subarray(1), 1, 2);
+    expect(Array.from(fromView.readBytes(2))).toEqual([7, 6]);
+
+    const fromDataView = Packet.from(new DataView(new Uint8Array([5, 4, 3]).buffer, 1));
+    expect(fromDataView.byteLength).toBe(2);
+    expect(fromDataView.readByte()).toBe(4);
+  });
+
+  it('copies input data instead of sharing it', () => {
+    const source = new Uint8Array([1, 2, 3]);
+    const packet = Packet.from(source);
+    source[0] = 99;
+    expect(packet.readByte()).toBe(1);
+  });
+
+  it('readBytes returns a copy', () => {
+    const packet = Packet.alloc(2);
+    const bytes = packet.readBytes(2);
+    packet.offset = 0;
+    packet.writeByte(0xff);
+    expect(bytes[0]).toBe(0);
+  });
+
+  it('throws RangeError and keeps the offset when string/byte access is out of bounds', () => {
+    const packet = Packet.alloc(3);
+
+    expect(() => packet.writeString('hello')).toThrow(RangeError);
+    expect(packet.offset).toBe(0);
+    expect(Array.from(packet.readBytes(3))).toEqual([0, 0, 0]);
+
+    packet.offset = 1;
+    expect(() => packet.readString(5)).toThrow(RangeError);
+    expect(packet.offset).toBe(1);
+
+    expect(() => packet.readBytes(5)).toThrow(RangeError);
+    expect(packet.offset).toBe(1);
+
+    expect(() => packet.readBytes(-1)).toThrow(RangeError);
+
+    // Exactly filling the remaining space is allowed
+    expect(packet.readString(2)).toBe('\0\0');
+    expect(packet.offset).toBe(3);
+  });
+
   it('grows to make room', () => {
     const packet = new Packet(5).useEndianness('LE');
     packet.appendSByte(-1);
@@ -161,6 +212,54 @@ describe('Node', () => {
 00000010  77 6f 72 6c 64 00 00                              | world..          |`)
   });
 
+  it('writes and reads utf8 strings by byte length', () => {
+    const text = 'héllo €';
+    const byteLength = Packet.byteLength(text, 'utf8');
+    expect(byteLength).toBe(10);
+    expect(Packet.byteLength(text)).toBe(7);
+
+    const packet = new Packet();
+    packet.appendString(text, 'utf8');
+    expect(packet.byteLength).toBe(byteLength);
+    expect(packet.offset).toBe(byteLength);
+
+    packet.offset = 0;
+    expect(packet.readString(byteLength, 'utf8')).toBe(text);
+  });
+
+  it('round-trips latin1 strings above ascii', () => {
+    const packet = Packet.alloc(3);
+    packet.writeString('éÿ');
+    packet.offset = 0;
+    expect(Array.from(packet.readBytes(3))).toEqual([0xe9, 0xff, 0x80]);
+    packet.offset = 0;
+    expect(packet.readString(3)).toBe('éÿ');
+  });
+
+  it('throws instead of truncating characters outside latin1', () => {
+    const packet = Packet.alloc(4);
+    expect(() => packet.writeString('a€')).toThrow(RangeError);
+    expect(packet.offset).toBe(0);
+    expect(() => packet.appendString('€')).toThrow(RangeError);
+    expect(packet.byteLength).toBe(4);
+  });
+
+  it('throws on invalid utf8 when reading', () => {
+    const packet = Packet.from(new Uint8Array([0xc3, 0x28]));
+    expect(() => packet.readString(2, 'utf8')).toThrow(TypeError);
+    expect(packet.offset).toBe(0);
+  });
+
+  it('writes and appends raw bytes', () => {
+    const packet = Packet.alloc(2);
+    packet.writeBytes(new Uint8Array([1, 2]));
+    expect(() => packet.writeBytes(new Uint8Array([3]))).toThrow(RangeError);
+    packet.appendBytes(new Uint8Array([3, 4]));
+    expect(packet.byteLength).toBe(4);
+    packet.offset = 0;
+    expect(Array.from(packet.readBytes(4))).toEqual([1, 2, 3, 4]);
+  });
+
   it('encodes and decodes a packet', () => {
     const packet = new Packet(5);
     packet.writeString('Hello');
@@ -172,6 +271,6 @@ describe('Node', () => {
     expect(decoded.toString()).toBe(packet.toString());
     expect(decoded.byteLength).toBe(packet.byteLength);
 
-    expect(decoded.toDataView()).toEqual(packet.toDataView());
+    expect(new Uint8Array(decoded.toDataView().buffer)).toEqual(new Uint8Array(packet.toDataView().buffer));
   });
 });
