@@ -5,6 +5,13 @@
   "type": "module",
   "main": "dist/packet.js",
   "types": "dist/packet.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/packet.d.ts",
+      "import": "./dist/packet.js",
+      "require": "./dist/packet.umd.cjs"
+    }
+  },
   "files": [
     "dist"
   ],
@@ -13,7 +20,7 @@
     "pretest:browser": "npm run build",
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "test:node": "vitest run",
-    "build": "tsc -d && vite build",
+    "build": "vite build && tsc --emitDeclarationOnly",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -39,5 +46,6 @@
     "typescript": "^5.9.3",
     "vite": "^6.0.5",
     "vitest": "^2.1.8"
-  }
+  },
+  "packageManager": "yarn@4.19.0"
 }
