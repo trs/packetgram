@@ -231,35 +231,44 @@ describe('Node', () => {
 00000010  77 6f 72 6c 64 00 00                              | world..          |`)
   });
 
-  it('writes and reads utf8 strings by byte length', () => {
+  it('defaults to utf8 and reads and writes strings by byte length', () => {
     const text = 'héllo €';
-    const byteLength = Packet.byteLength(text, 'utf8');
+    const byteLength = Packet.byteLength(text);
     expect(byteLength).toBe(10);
-    expect(Packet.byteLength(text)).toBe(7);
+    expect(Packet.byteLength('héllo', 'latin1')).toBe(5);
+    expect(() => Packet.byteLength(text, 'latin1')).toThrow(RangeError);
 
     const packet = new Packet();
-    packet.appendString(text, 'utf8');
+    expect(packet.encoding).toBe('utf8');
+    packet.appendString(text);
     expect(packet.byteLength).toBe(byteLength);
     expect(packet.offset).toBe(byteLength);
 
     packet.offset = 0;
-    expect(packet.readString(byteLength, 'utf8')).toBe(text);
+    expect(packet.readString(byteLength)).toBe(text);
+  });
+
+  it('keeps a leading byte order mark when reading utf8', () => {
+    const packet = new Packet().appendString('﻿abc');
+    expect(packet.byteLength).toBe(6);
+    packet.offset = 0;
+    expect(packet.readString(6)).toBe('﻿abc');
   });
 
   it('round-trips latin1 strings above ascii', () => {
-    const packet = Packet.alloc(3);
-    packet.writeString('éÿ');
+    const packet = Packet.alloc(3).useEncoding('latin1');
+    packet.writeString('éÿ\u0080');
     packet.offset = 0;
     expect(Array.from(packet.readBytes(3))).toEqual([0xe9, 0xff, 0x80]);
     packet.offset = 0;
-    expect(packet.readString(3)).toBe('éÿ');
+    expect(packet.readString(3)).toBe('éÿ\u0080');
   });
 
   it('throws instead of truncating characters outside latin1', () => {
     const packet = Packet.alloc(4);
-    expect(() => packet.writeString('a€')).toThrow(RangeError);
+    expect(() => packet.writeString('a€', 'latin1')).toThrow(RangeError);
     expect(packet.offset).toBe(0);
-    expect(() => packet.appendString('€')).toThrow(RangeError);
+    expect(() => packet.appendString('€', 'latin1')).toThrow(RangeError);
     expect(packet.byteLength).toBe(4);
   });
 
@@ -317,6 +326,160 @@ describe('Node', () => {
 
     packet.useEncoding('latin1');
     expect(() => packet.writeString('€')).toThrow(RangeError);
+  });
+
+  it('reads and writes number values at their limits', () => {
+    const packet = new Packet();
+    packet.appendSByte(-128).appendByte(255);
+    packet.appendInt16(-32768).appendUInt16(65535);
+    packet.appendInt32(-2147483648).appendUInt32(4294967295);
+    packet.appendInt64(-(BigInt(2) ** BigInt(63))).appendUInt64(BigInt(2) ** BigInt(64) - BigInt(1));
+    packet.appendFloat(1.5).appendDouble(Math.PI);
+
+    packet.offset = 0;
+    expect(packet.readSByte()).toBe(-128);
+    expect(packet.readByte()).toBe(255);
+    expect(packet.readInt16()).toBe(-32768);
+    expect(packet.readUInt16()).toBe(65535);
+    expect(packet.readInt32()).toBe(-2147483648);
+    expect(packet.readUInt32()).toBe(4294967295);
+    expect(packet.readInt64()).toBe(-(BigInt(2) ** BigInt(63)));
+    expect(packet.readUInt64()).toBe(BigInt(2) ** BigInt(64) - BigInt(1));
+    expect(packet.readFloat()).toBe(1.5);
+    expect(packet.readDouble()).toBe(Math.PI);
+  });
+
+  it('uses little-endian byte order for 32 and 64-bit values', () => {
+    const packet = new Packet().useEndianness('LE');
+    packet.appendUInt32(0x01020304).appendUInt64(BigInt('0x0102030405060708'));
+    expect(Array.from(packet.toUint8Array())).toEqual([4, 3, 2, 1, 8, 7, 6, 5, 4, 3, 2, 1]);
+
+    packet.offset = 0;
+    expect(packet.readUInt32()).toBe(0x01020304);
+    expect(packet.readUInt64()).toBe(BigInt('0x0102030405060708'));
+  });
+
+  it('throws on integers that do not fit the type', () => {
+    const packet = Packet.alloc(8);
+    expect(() => packet.writeByte(256)).toThrow(RangeError);
+    expect(() => packet.writeByte(-1)).toThrow(RangeError);
+    expect(() => packet.writeByte(1.5)).toThrow(RangeError);
+    expect(() => packet.writeSByte(128)).toThrow(RangeError);
+    expect(() => packet.writeUInt16(-1)).toThrow(RangeError);
+    expect(() => packet.writeInt16(32768)).toThrow(RangeError);
+    expect(() => packet.writeUInt32(2 ** 32)).toThrow(RangeError);
+    expect(() => packet.writeInt32(NaN)).toThrow(RangeError);
+    expect(() => packet.writeUInt64(BigInt(-1))).toThrow(RangeError);
+    expect(() => packet.writeInt64(BigInt(2) ** BigInt(63))).toThrow(RangeError);
+    expect(() => packet.writeInt64(1 as unknown as bigint)).toThrow(TypeError);
+    expect(packet.offset).toBe(0);
+
+    const growing = new Packet();
+    expect(() => growing.appendUInt16(65536)).toThrow(RangeError);
+    expect(growing.byteLength).toBe(0);
+  });
+
+  it('throws and keeps the offset when a number read or write is out of bounds', () => {
+    const packet = Packet.alloc(3);
+    packet.offset = 1;
+    expect(() => packet.readUInt32()).toThrow(RangeError);
+    expect(() => packet.writeUInt32(1)).toThrow(RangeError);
+    expect(packet.offset).toBe(1);
+  });
+
+  it('rejects offsets and lengths that are not non-negative integers', () => {
+    const packet = Packet.alloc(4);
+
+    packet.offset = NaN;
+    expect(() => packet.readByte()).toThrow(RangeError);
+    packet.offset = 0.5;
+    expect(() => packet.readString(1)).toThrow(RangeError);
+    packet.offset = 0;
+
+    expect(() => packet.readBytes(NaN)).toThrow(RangeError);
+    expect(() => packet.readBytes(1.5)).toThrow(RangeError);
+    expect(() => packet.grow(-1)).toThrow(RangeError);
+    expect(packet.offset).toBe(0);
+  });
+
+  it('validates skip and allows moving past the end', () => {
+    const packet = Packet.alloc(4);
+    expect(() => packet.skip(-1)).toThrow(RangeError);
+    expect(() => packet.skip(5, 'end')).toThrow(RangeError);
+    expect(() => packet.skip(undefined as unknown as number)).toThrow(RangeError);
+    expect(() => packet.skip(1, 'middle' as 'begin')).toThrow(TypeError);
+    expect(packet.offset).toBe(0);
+
+    packet.skip(0, 'end');
+    expect(packet.offset).toBe(4);
+
+    packet.skip(2).appendByte(1);
+    expect(Array.from(packet.toUint8Array())).toEqual([0, 0, 0, 0, 0, 0, 1]);
+  });
+
+  it('rejects unknown endianness and encoding values', () => {
+    const packet = Packet.alloc(2);
+    expect(() => packet.writeUInt16(1, 'le' as 'LE')).toThrow(TypeError);
+    expect(() => packet.readUInt16('little' as 'LE')).toThrow(TypeError);
+    expect(() => packet.useEndianness('le' as 'LE')).toThrow(TypeError);
+    expect(() => packet.useEncoding('utf-8' as 'utf8')).toThrow(TypeError);
+    expect(() => packet.readString(1, 'ascii' as 'utf8')).toThrow(TypeError);
+    expect(() => Packet.byteLength('a', 'utf-8' as 'utf8')).toThrow(TypeError);
+    expect(packet.offset).toBe(0);
+    expect(packet.endianness).toBe('BE');
+    expect(packet.encoding).toBe('utf8');
+  });
+
+  it('validates the byte range when creating from a buffer', () => {
+    const source = new Uint8Array([1, 2]);
+    expect(() => Packet.from(source, -1)).toThrow(RangeError);
+    expect(() => Packet.from(source, 3)).toThrow(RangeError);
+    expect(() => Packet.from(source, 0, 3)).toThrow(RangeError);
+    expect(() => Packet.from(source, 0, -1)).toThrow(RangeError);
+    expect(Packet.from(source, 2).byteLength).toBe(0);
+    expect(Array.from(Packet.from(source, 1).toUint8Array())).toEqual([2]);
+  });
+
+  it('writes bytes from any buffer or typed array', () => {
+    const packet = new Packet();
+    packet.appendBytes(new Uint8Array([1, 2]).buffer);
+    packet.appendBytes(new Uint16Array([0x0102]));
+    packet.appendBytes(new DataView(new Uint8Array([9, 3]).buffer, 1));
+    expect(packet.byteLength).toBe(5);
+
+    const expected = [1, 2, ...new Uint8Array(new Uint16Array([0x0102]).buffer), 3];
+    expect(Array.from(packet.toUint8Array())).toEqual(expected);
+  });
+
+  it('returns copies from toUint8Array and toDataView', () => {
+    const packet = Packet.alloc(2);
+    const bytes = packet.toUint8Array();
+    const view = packet.toDataView();
+    packet.writeByte(0xff);
+    expect(bytes[0]).toBe(0);
+    expect(view.getUint8(0)).toBe(0);
+  });
+
+  it('dumps an empty packet and exactly one full line', () => {
+    expect(new Packet().toString()).toBe('');
+
+    const packet = new Packet().appendString('0123456789abcdef');
+    expect(packet.toString()).toBe(
+      '00000000  30 31 32 33 34 35 36 37  38 39 61 62 63 64 65 66  | 0123456789abcdef |'
+    );
+  });
+
+  it('encodes and decodes large packets', () => {
+    const bytes = new Uint8Array(20000);
+    for (let i = 0; i < bytes.length; i++) bytes[i] = i % 256;
+
+    const encoded = Packet.encode(Packet.from(bytes));
+    expect(encoded).toBe(Buffer.from(bytes).toString('base64'));
+    expect(Array.from(Packet.decode(encoded).toUint8Array())).toEqual(Array.from(bytes));
+  });
+
+  it('throws when decoding invalid base64', () => {
+    expect(() => Packet.decode('not base64!')).toThrow();
   });
 
   it('encodes and decodes a packet', () => {

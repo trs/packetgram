@@ -18,9 +18,17 @@ import Packet from 'packetgram';
 // Allocate a new packet with a specific size
 const packet = Packet.alloc(10);
 
-// Or create from an existing ArrayBuffer
-const buffer = new ArrayBuffer(10);
-const packet = Packet.from(buffer);
+// Or create from a copy of an existing ArrayBuffer, typed array or Node Buffer
+const copy = Packet.from(new Uint8Array([1, 2, 3]));
+
+// Optionally copy only a byte range of it
+const part = Packet.from(new Uint8Array([1, 2, 3]), 1, 2); // bytes [2, 3]
+```
+
+CommonJS works too:
+
+```javascript
+const Packet = require('packetgram');
 ```
 
 ### Writing Data
@@ -69,30 +77,54 @@ const decoded = Packet.decode(encoded);
 ### Strings and Bytes
 
 ```javascript
-// Strings default to latin1 (1 byte per character, U+0000 to U+00FF).
-// Characters outside that range throw a RangeError instead of being truncated.
+// Strings default to utf8. Lengths are always in bytes, not characters.
 const packet = new Packet();
-packet.appendString('héllo');
-
-// Use 'utf8' for any Unicode text. Lengths are always in bytes, not characters.
 const text = 'héllo €';
-const length = Packet.byteLength(text, 'utf8'); // 10
+const length = Packet.byteLength(text); // 10
 packet.appendUInt16(length);
-packet.appendString(text, 'utf8');
+packet.appendString(text);
 
-packet.offset = 5;
-packet.readString(packet.readUInt16(), 'utf8'); // 'héllo €'
+packet.offset = 0;
+packet.readString(packet.readUInt16()); // 'héllo €'
 
-// Or set the packet's default encoding; a per-call encoding still overrides it
-packet.useEncoding('utf8');
-packet.appendString('€');
+// latin1 uses 1 byte per character (U+0000 to U+00FF).
+// Characters outside that range throw a RangeError instead of being truncated.
 packet.appendString('é', 'latin1');
 
-// Raw bytes (readBytes returns a copy)
+// Or change the packet's default encoding; a per-call encoding still overrides it
+packet.useEncoding('latin1');
+packet.appendString('é');
+packet.appendString('€', 'utf8');
+
+// Raw bytes from any ArrayBuffer, typed array or Node Buffer
 packet.appendBytes(new Uint8Array([1, 2, 3]));
+
+// readBytes and toUint8Array return copies
+const bytes = packet.toUint8Array();
 ```
 
-Reading or writing past the end of the packet throws a `RangeError` and leaves the offset unchanged. Use the `append*` methods to grow the packet as you write.
+### Moving the Offset
+
+```javascript
+const packet = Packet.alloc(10);
+
+packet.skip(2);           // forward 2 bytes from the current offset
+packet.skip(4, 'begin');  // to offset 4
+packet.skip(4, 'end');    // to 4 bytes before the end (offset 6)
+
+// The offset may move past the end; the next append fills the gap with zeros
+packet.skip(0, 'end').skip(2).appendByte(1); // packet is now 13 bytes
+```
+
+### Errors
+
+Mistakes throw instead of silently corrupting data, and a failed read or write leaves the offset unchanged:
+
+- Reading or writing past the end of the packet throws a `RangeError`. Use the `append*` methods to grow the packet as you write.
+- Integers that don't fit the type, such as `writeByte(256)`, throw a `RangeError`.
+- Offsets and lengths must be non-negative integers.
+- Unknown endianness or encoding values, such as `'le'` or `'utf-8'`, throw a `TypeError`.
+- Invalid UTF-8 and invalid base64 throw when read or decoded.
 
 ### Endianness
 
