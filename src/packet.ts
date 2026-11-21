@@ -58,29 +58,8 @@ export default class Packet {
     return new Packet(data, byteOffset, byteLength);
   }
 
-  /** Encode the packet's bytes as base64 */
-  public static encode(packet: Packet): string {
-    const bytes: NativeBase64Bytes = packet.bytes;
-
-    if (typeof bytes.toBase64 === 'function') {
-      return bytes.toBase64();
-    }
-    if (typeof Buffer !== 'undefined') {
-      return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString('base64');
-    }
-    if (typeof btoa !== 'undefined') {
-      const chunkSize = 8192;
-      const chunks: string[] = [];
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        chunks.push(String.fromCharCode(...bytes.subarray(i, i + chunkSize)));
-      }
-      return btoa(chunks.join(''));
-    }
-    throw new Error('Base64 encoding not available in this environment');
-  }
-
   /** Create a packet from base64. Throws on invalid input. */
-  public static decode(base64: string): Packet {
+  public static fromBase64(base64: string): Packet {
     const native = Uint8Array as unknown as NativeBase64Constructor;
 
     if (typeof native.fromBase64 === 'function') {
@@ -352,15 +331,17 @@ export default class Packet {
     return this.writeBytes(Packet.encodeString(text, encoding));
   }
 
-  // Append: write at the current offset, growing the packet if the value does not fit
+  // Append: the same as write*, but grows the packet first if the value does not fit.
+  // They write at the current offset, not at the end, so they only add to the end when the
+  // offset is already there; with the offset inside the packet they overwrite like write*.
 
-  /** Append 1 signed byte to the current offset */
+  /** Write 1 signed byte at the current offset, growing the packet if needed */
   public appendInt8(value: number): this {
     Packet.checkInteger(value, -0x80, 0x7f, 'Int8');
     return this.grow(1).writeInt8(value);
   }
 
-  /** Append 2 signed bytes to the current offset */
+  /** Write 2 signed bytes at the current offset, growing the packet if needed */
   public appendInt16(value: number): this;
   public appendInt16(value: number, endianness?: Endianness): this;
   public appendInt16(value: number, endianness: Endianness = this.endianness): this {
@@ -368,7 +349,7 @@ export default class Packet {
     return this.grow(2).writeInt16(value, endianness);
   }
 
-  /** Append 4 signed bytes to the current offset */
+  /** Write 4 signed bytes at the current offset, growing the packet if needed */
   public appendInt32(value: number): this;
   public appendInt32(value: number, endianness?: Endianness): this;
   public appendInt32(value: number, endianness: Endianness = this.endianness): this {
@@ -376,7 +357,7 @@ export default class Packet {
     return this.grow(4).writeInt32(value, endianness);
   }
 
-  /** Append 8 signed bytes to the current offset */
+  /** Write 8 signed bytes at the current offset, growing the packet if needed */
   public appendInt64(value: bigint): this;
   public appendInt64(value: bigint, endianness?: Endianness): this;
   public appendInt64(value: bigint, endianness: Endianness = this.endianness): this {
@@ -384,13 +365,13 @@ export default class Packet {
     return this.grow(8).writeInt64(value, endianness);
   }
 
-  /** Append 1 unsigned byte to the current offset */
+  /** Write 1 unsigned byte at the current offset, growing the packet if needed */
   public appendUInt8(value: number): this {
     Packet.checkInteger(value, 0, 0xff, 'UInt8');
     return this.grow(1).writeUInt8(value);
   }
 
-  /** Append 2 unsigned bytes to the current offset */
+  /** Write 2 unsigned bytes at the current offset, growing the packet if needed */
   public appendUInt16(value: number): this;
   public appendUInt16(value: number, endianness?: Endianness): this;
   public appendUInt16(value: number, endianness: Endianness = this.endianness): this {
@@ -398,7 +379,7 @@ export default class Packet {
     return this.grow(2).writeUInt16(value, endianness);
   }
 
-  /** Append 4 unsigned bytes to the current offset */
+  /** Write 4 unsigned bytes at the current offset, growing the packet if needed */
   public appendUInt32(value: number): this;
   public appendUInt32(value: number, endianness?: Endianness): this;
   public appendUInt32(value: number, endianness: Endianness = this.endianness): this {
@@ -406,7 +387,7 @@ export default class Packet {
     return this.grow(4).writeUInt32(value, endianness);
   }
 
-  /** Append 8 unsigned bytes to the current offset */
+  /** Write 8 unsigned bytes at the current offset, growing the packet if needed */
   public appendUInt64(value: bigint): this;
   public appendUInt64(value: bigint, endianness?: Endianness): this;
   public appendUInt64(value: bigint, endianness: Endianness = this.endianness): this {
@@ -414,27 +395,27 @@ export default class Packet {
     return this.grow(8).writeUInt64(value, endianness);
   }
 
-  /** Append 8 bytes to the current offset as a double */
+  /** Write 8 bytes at the current offset as a double, growing the packet if needed */
   public appendDouble(value: number): this;
   public appendDouble(value: number, endianness?: Endianness): this;
   public appendDouble(value: number, endianness: Endianness = this.endianness): this {
     return this.grow(8).writeDouble(value, endianness);
   }
 
-  /** Append 4 bytes to the current offset as a float */
+  /** Write 4 bytes at the current offset as a float, growing the packet if needed */
   public appendFloat(value: number): this;
   public appendFloat(value: number, endianness?: Endianness): this;
   public appendFloat(value: number, endianness: Endianness = this.endianness): this {
     return this.grow(4).writeFloat(value, endianness);
   }
 
-  /** Append raw bytes to the current offset */
+  /** Write raw bytes at the current offset, growing the packet if needed */
   public appendBytes(data: ArrayBufferLike | ArrayBufferView): this {
     const bytes = Packet.toBytes(data);
     return this.grow(bytes.length).writeBytes(bytes);
   }
 
-  /** Append a string to the current offset, growing by its encoded byte length */
+  /** Write a string at the current offset, growing the packet if needed */
   public appendString(text: string): this;
   public appendString(text: string, encoding?: StringEncoding): this;
   public appendString(text: string, encoding: StringEncoding = this.stringEncoding): this {
@@ -527,6 +508,27 @@ export default class Packet {
 
   public get byteLength(): number {
     return this.bytes.length;
+  }
+
+  /** Encode the packet's bytes as base64 */
+  public toBase64(): string {
+    const bytes: NativeBase64Bytes = this.bytes;
+
+    if (typeof bytes.toBase64 === 'function') {
+      return bytes.toBase64();
+    }
+    if (typeof Buffer !== 'undefined') {
+      return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString('base64');
+    }
+    if (typeof btoa !== 'undefined') {
+      const chunkSize = 8192;
+      const chunks: string[] = [];
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        chunks.push(String.fromCharCode(...bytes.subarray(i, i + chunkSize)));
+      }
+      return btoa(chunks.join(''));
+    }
+    throw new Error('Base64 encoding not available in this environment');
   }
 
   /** Return a copy of the packet's bytes */

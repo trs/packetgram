@@ -41,10 +41,21 @@ packet.writeUInt32(42);
 packet.writeString('Hello');
 packet.writeFloat(3.14);
 
-// Or use append methods that automatically grow the buffer
-const dynamicPacket = new Packet(5);
+// Or use append methods, which grow the packet when the value does not fit
+const dynamicPacket = new Packet();
 dynamicPacket.appendUInt32(100);
 dynamicPacket.appendString(' World!');
+```
+
+`append*` methods write at the current offset, exactly like `write*`, and grow the packet first if needed. They don't jump to the end: with the offset inside the packet, they overwrite existing bytes. That makes them useful for patching a value in place, too:
+
+```javascript
+const packet = Packet.alloc(4);   // [00 00 00 00], offset 0
+packet.appendUInt16(0xffff);      // [ff ff 00 00], offset 2: fits, so no growth
+packet.appendUInt32(0x01020304);  // [ff ff 01 02 03 04], offset 6: grew by 2
+
+packet.offset = 0;
+packet.appendUInt16(6);           // [00 06 01 02 03 04]: overwrote bytes 0-1
 ```
 
 ### Reading Data
@@ -61,17 +72,17 @@ const number = packet.readUInt32();  // 42
 const text = packet.readString(5);   // 'Hello'
 ```
 
-### Encoding/Decoding
+### Base64
 
 ```javascript
 const packet = Packet.alloc(10);
 packet.writeString('Hello');
 
 // Encode to base64
-const encoded = Packet.encode(packet);
+const encoded = packet.toBase64();
 
-// Decode from base64
-const decoded = Packet.decode(encoded);
+// Decode from base64 into a new packet
+const decoded = Packet.fromBase64(encoded);
 ```
 
 ### Strings and Bytes

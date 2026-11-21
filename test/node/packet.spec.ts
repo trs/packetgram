@@ -205,7 +205,7 @@ describe('Node', () => {
     packet.appendUInt8(1);
     expect(packet.byteLength).toBe(201);
     expect(packet.toDataView().byteLength).toBe(201);
-    expect(Packet.decode(Packet.encode(packet)).byteLength).toBe(201);
+    expect(Packet.fromBase64(packet.toBase64()).byteLength).toBe(201);
     expect(() => packet.readUInt32()).toThrow(RangeError);
 
     // Further appends reuse the spare capacity and keep earlier data
@@ -469,13 +469,13 @@ describe('Node', () => {
     const bytes = new Uint8Array(20000);
     for (let i = 0; i < bytes.length; i++) bytes[i] = i % 256;
 
-    const encoded = Packet.encode(Packet.from(bytes));
+    const encoded = Packet.from(bytes).toBase64();
     expect(encoded).toBe(Buffer.from(bytes).toString('base64'));
-    expect(Array.from(Packet.decode(encoded).toUint8Array())).toEqual(Array.from(bytes));
+    expect(Array.from(Packet.fromBase64(encoded).toUint8Array())).toEqual(Array.from(bytes));
   });
 
   it('throws when decoding invalid base64', () => {
-    expect(() => Packet.decode('not base64!')).toThrow();
+    expect(() => Packet.fromBase64('not base64!')).toThrow();
   });
 
   it('encodes and decodes a packet', () => {
@@ -483,8 +483,8 @@ describe('Node', () => {
     packet.writeString('Hello');
     packet.appendString(' World!');
 
-    const encoded = Packet.encode(packet);
-    const decoded = Packet.decode(encoded);
+    const encoded = packet.toBase64();
+    const decoded = Packet.fromBase64(encoded);
 
     expect(decoded.toString()).toBe(packet.toString());
     expect(decoded.byteLength).toBe(packet.byteLength);

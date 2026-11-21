@@ -24,7 +24,7 @@ describe('Browser', () => {
       const packet = new window.Packet(5);
       packet.writeString('Hello');
       packet.appendString(' World!');
-      return { dump: packet.toString(), encoded: window.Packet.encode(packet) };
+      return { dump: packet.toString(), encoded: packet.toBase64() };
     });
 
     expect(result.dump).toBe(
@@ -47,7 +47,7 @@ describe('Browser', () => {
 
       const bytes = new Uint8Array(20000);
       for (let i = 0; i < bytes.length; i++) bytes[i] = i % 256;
-      const decoded = Packet.decode(Packet.encode(Packet.from(bytes))).toUint8Array();
+      const decoded = Packet.fromBase64(Packet.from(bytes).toBase64()).toUint8Array();
 
       return {
         text: strings.readString(strings.byteLength),
@@ -67,7 +67,7 @@ describe('Browser', () => {
     const encoded = await page.evaluate(() => {
       const bytes = new Uint8Array(20000);
       for (let i = 0; i < bytes.length; i++) bytes[i] = i % 256;
-      return window.Packet.encode(window.Packet.from(bytes));
+      return window.Packet.from(bytes).toBase64();
     });
 
     const bytes = new Uint8Array(20000);
