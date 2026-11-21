@@ -279,6 +279,46 @@ describe('Node', () => {
     expect(Array.from(packet.readBytes(4))).toEqual([1, 2, 3, 4]);
   });
 
+  it('applies a per-call endianness without changing the packet default', () => {
+    const packet = new Packet();
+    packet.appendUInt16(0x0102, 'LE');
+    packet.appendUInt16(0x0102);
+
+    packet.offset = 0;
+    expect(Array.from(packet.readBytes(4))).toEqual([0x02, 0x01, 0x01, 0x02]);
+
+    packet.offset = 0;
+    expect(packet.readUInt16('LE')).toBe(0x0102);
+    expect(packet.readUInt16()).toBe(0x0102);
+
+    packet.useEndianness('LE');
+    packet.offset = 0;
+    expect(packet.readUInt16()).toBe(0x0102);
+    expect(packet.readUInt16('BE')).toBe(0x0102);
+
+    packet.offset = 2;
+    expect(packet.readUInt16()).toBe(0x0201);
+  });
+
+  it('uses the packet encoding for strings unless one is passed', () => {
+    const packet = new Packet().useEncoding('utf8');
+    packet.appendString('€');
+    expect(packet.byteLength).toBe(3);
+
+    packet.appendString('é', 'latin1');
+    expect(packet.byteLength).toBe(4);
+
+    packet.offset = 0;
+    expect(packet.readString(3)).toBe('€');
+    expect(packet.readString(1, 'latin1')).toBe('é');
+
+    packet.offset = 3;
+    expect(() => packet.readString(1)).toThrow(TypeError);
+
+    packet.useEncoding('latin1');
+    expect(() => packet.writeString('€')).toThrow(RangeError);
+  });
+
   it('encodes and decodes a packet', () => {
     const packet = new Packet(5);
     packet.writeString('Hello');

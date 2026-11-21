@@ -1,4 +1,5 @@
 export type StringEncoding = 'latin1' | 'utf8';
+export type Endianness = 'BE' | 'LE';
 
 const utf8Encoder = new TextEncoder();
 // fatal: invalid UTF-8 throws instead of silently becoming U+FFFD
@@ -8,6 +9,7 @@ export default class Packet {
   private bytes: Uint8Array;
   private view: DataView;
   private littleEndian: boolean = false;
+  private encoding: StringEncoding = 'latin1';
 
   public offset: number = 0;
 
@@ -125,22 +127,28 @@ export default class Packet {
   }
 
   /** Read 2 bytes from the current offset as a signed number */
-  public readInt16() {
-    const value = this.view.getInt16(this.offset, this.littleEndian);
+  public readInt16(): number;
+  public readInt16(endianness: Endianness): number;
+  public readInt16(endianness: Endianness = this.endianness): number {
+    const value = this.view.getInt16(this.offset, endianness === 'LE');
     this.offset += 2;
     return value;
   }
 
   /** Read 4 bytes from the current offset as a signed number */
-  public readInt32() {
-    const value = this.view.getInt32(this.offset, this.littleEndian);
+  public readInt32(): number;
+  public readInt32(endianness: Endianness): number;
+  public readInt32(endianness: Endianness = this.endianness): number {
+    const value = this.view.getInt32(this.offset, endianness === 'LE');
     this.offset += 4;
     return value;
   }
 
   /** Read 8 bytes from the current offset as a signed bigint */
-  public readInt64() {
-    const value = this.view.getBigInt64(this.offset, this.littleEndian);
+  public readInt64(): bigint;
+  public readInt64(endianness: Endianness): bigint;
+  public readInt64(endianness: Endianness = this.endianness): bigint {
+    const value = this.view.getBigInt64(this.offset, endianness === 'LE');
     this.offset += 8;
     return value;
   }
@@ -153,42 +161,54 @@ export default class Packet {
   }
 
   /** Read 2 bytes from the current offset as an unsigned number */
-  public readUInt16() {
-    const value = this.view.getUint16(this.offset, this.littleEndian);
+  public readUInt16(): number;
+  public readUInt16(endianness: Endianness): number;
+  public readUInt16(endianness: Endianness = this.endianness): number {
+    const value = this.view.getUint16(this.offset, endianness === 'LE');
     this.offset += 2;
     return value;
   }
 
   /** Read 4 bytes from the current offset as an unsigned number */
-  public readUInt32() {
-    const value = this.view.getUint32(this.offset, this.littleEndian);
+  public readUInt32(): number;
+  public readUInt32(endianness: Endianness): number;
+  public readUInt32(endianness: Endianness = this.endianness): number {
+    const value = this.view.getUint32(this.offset, endianness === 'LE');
     this.offset += 4;
     return value;
   }
 
   /** Read 8 bytes from the current offset as an unsigned bigint */
-  public readUInt64() {
-    const value = this.view.getBigUint64(this.offset, this.littleEndian);
+  public readUInt64(): bigint;
+  public readUInt64(endianness: Endianness): bigint;
+  public readUInt64(endianness: Endianness = this.endianness): bigint {
+    const value = this.view.getBigUint64(this.offset, endianness === 'LE');
     this.offset += 8;
     return value;
   }
 
   /** Read 8 bytes from the current offset as a double */
-  public readDouble() {
-    const value = this.view.getFloat64(this.offset, this.littleEndian);
+  public readDouble(): number;
+  public readDouble(endianness: Endianness): number;
+  public readDouble(endianness: Endianness = this.endianness): number {
+    const value = this.view.getFloat64(this.offset, endianness === 'LE');
     this.offset += 8;
     return value;
   }
 
   /** Read 4 bytes from the current offset as a float */
-  public readFloat() {
-    const value = this.view.getFloat32(this.offset, this.littleEndian);
+  public readFloat(): number;
+  public readFloat(endianness: Endianness): number;
+  public readFloat(endianness: Endianness = this.endianness): number {
+    const value = this.view.getFloat32(this.offset, endianness === 'LE');
     this.offset += 4;
     return value;
   }
 
   /** Read `length` bytes (not characters) from the current offset as a string */
-  public readString(length: number, encoding: StringEncoding = 'latin1') {
+  public readString(length: number): string;
+  public readString(length: number, encoding: StringEncoding): string;
+  public readString(length: number, encoding: StringEncoding = this.encoding): string {
     this.checkBounds(length);
     const bytes = this.bytes.subarray(this.offset, this.offset + length);
 
@@ -225,22 +245,28 @@ export default class Packet {
   }
 
   /** Write 2 signed bytes to the current offset */
-  public writeInt16(value: number) {
-    this.view.setInt16(this.offset, value, this.littleEndian);
+  public writeInt16(value: number): this;
+  public writeInt16(value: number, endianness: Endianness): this;
+  public writeInt16(value: number, endianness: Endianness = this.endianness): this {
+    this.view.setInt16(this.offset, value, endianness === 'LE');
     this.offset += 2;
     return this;
   }
 
   /** Write 4 signed bytes to the current offset */
-  public writeInt32(value: number) {
-    this.view.setInt32(this.offset, value, this.littleEndian);
+  public writeInt32(value: number): this;
+  public writeInt32(value: number, endianness: Endianness): this;
+  public writeInt32(value: number, endianness: Endianness = this.endianness): this {
+    this.view.setInt32(this.offset, value, endianness === 'LE');
     this.offset += 4;
     return this;
   }
 
   /** Write 8 signed bytes to the current offset */
-  public writeInt64(value: bigint) {
-    this.view.setBigInt64(this.offset, value, this.littleEndian);
+  public writeInt64(value: bigint): this;
+  public writeInt64(value: bigint, endianness: Endianness): this;
+  public writeInt64(value: bigint, endianness: Endianness = this.endianness): this {
+    this.view.setBigInt64(this.offset, value, endianness === 'LE');
     this.offset += 8;
     return this;
   }
@@ -253,36 +279,46 @@ export default class Packet {
   }
 
   /** Write 2 unsigned bytes to the current offset */
-  public writeUInt16(value: number) {
-    this.view.setUint16(this.offset, value, this.littleEndian);
+  public writeUInt16(value: number): this;
+  public writeUInt16(value: number, endianness: Endianness): this;
+  public writeUInt16(value: number, endianness: Endianness = this.endianness): this {
+    this.view.setUint16(this.offset, value, endianness === 'LE');
     this.offset += 2;
     return this;
   }
 
   /** Write 4 unsigned bytes to the current offset */
-  public writeUInt32(value: number) {
-    this.view.setUint32(this.offset, value, this.littleEndian);
+  public writeUInt32(value: number): this;
+  public writeUInt32(value: number, endianness: Endianness): this;
+  public writeUInt32(value: number, endianness: Endianness = this.endianness): this {
+    this.view.setUint32(this.offset, value, endianness === 'LE');
     this.offset += 4;
     return this;
   }
 
   /** Write 8 unsigned bytes to the current offset */
-  public writeUInt64(value: bigint) {
-    this.view.setBigUint64(this.offset, value, this.littleEndian);
+  public writeUInt64(value: bigint): this;
+  public writeUInt64(value: bigint, endianness: Endianness): this;
+  public writeUInt64(value: bigint, endianness: Endianness = this.endianness): this {
+    this.view.setBigUint64(this.offset, value, endianness === 'LE');
     this.offset += 8;
     return this;
   }
 
   /** Write 8 bytes to the current offset as a double */
-  public writeDouble(value: number) {
-    this.view.setFloat64(this.offset, value, this.littleEndian);
+  public writeDouble(value: number): this;
+  public writeDouble(value: number, endianness: Endianness): this;
+  public writeDouble(value: number, endianness: Endianness = this.endianness): this {
+    this.view.setFloat64(this.offset, value, endianness === 'LE');
     this.offset += 8;
     return this;
   }
 
   /** Write 4 bytes to the current offset as a float */
-  public writeFloat(value: number) {
-    this.view.setFloat32(this.offset, value, this.littleEndian);
+  public writeFloat(value: number): this;
+  public writeFloat(value: number, endianness: Endianness): this;
+  public writeFloat(value: number, endianness: Endianness = this.endianness): this {
+    this.view.setFloat32(this.offset, value, endianness === 'LE');
     this.offset += 4;
     return this;
   }
@@ -296,7 +332,9 @@ export default class Packet {
   }
 
   /** Write a string to the current offset */
-  public writeString(text: string, encoding: StringEncoding = 'latin1') {
+  public writeString(text: string): this;
+  public writeString(text: string, encoding: StringEncoding): this;
+  public writeString(text: string, encoding: StringEncoding = this.encoding): this {
     return this.writeBytes(Packet.encodeString(text, encoding));
   }
 
@@ -309,21 +347,27 @@ export default class Packet {
   }
 
   /** Append 2 signed bytes to the current offset */
-  public appendInt16(value: number) {
+  public appendInt16(value: number): this;
+  public appendInt16(value: number, endianness: Endianness): this;
+  public appendInt16(value: number, endianness: Endianness = this.endianness): this {
     this.grow(2);
-    return this.writeInt16(value);
+    return this.writeInt16(value, endianness);
   }
 
   /** Append 4 signed bytes to the current offset */
-  public appendInt32(value: number) {
+  public appendInt32(value: number): this;
+  public appendInt32(value: number, endianness: Endianness): this;
+  public appendInt32(value: number, endianness: Endianness = this.endianness): this {
     this.grow(4);
-    return this.writeInt32(value);
+    return this.writeInt32(value, endianness);
   }
 
   /** Append 8 signed bytes to the current offset */
-  public appendInt64(value: bigint) {
+  public appendInt64(value: bigint): this;
+  public appendInt64(value: bigint, endianness: Endianness): this;
+  public appendInt64(value: bigint, endianness: Endianness = this.endianness): this {
     this.grow(8);
-    return this.writeInt64(value);
+    return this.writeInt64(value, endianness);
   }
 
   /** Append 1 unsigned byte to the current offset */
@@ -333,33 +377,43 @@ export default class Packet {
   }
 
   /** Append 2 unsigned bytes to the current offset */
-  public appendUInt16(value: number) {
+  public appendUInt16(value: number): this;
+  public appendUInt16(value: number, endianness: Endianness): this;
+  public appendUInt16(value: number, endianness: Endianness = this.endianness): this {
     this.grow(2);
-    return this.writeUInt16(value);
+    return this.writeUInt16(value, endianness);
   }
 
   /** Append 4 unsigned bytes to the current offset */
-  public appendUInt32(value: number) {
+  public appendUInt32(value: number): this;
+  public appendUInt32(value: number, endianness: Endianness): this;
+  public appendUInt32(value: number, endianness: Endianness = this.endianness): this {
     this.grow(4);
-    return this.writeUInt32(value);
+    return this.writeUInt32(value, endianness);
   }
 
   /** Append 8 unsigned bytes to the current offset */
-  public appendUInt64(value: bigint) {
+  public appendUInt64(value: bigint): this;
+  public appendUInt64(value: bigint, endianness: Endianness): this;
+  public appendUInt64(value: bigint, endianness: Endianness = this.endianness): this {
     this.grow(8);
-    return this.writeUInt64(value);
+    return this.writeUInt64(value, endianness);
   }
 
   /** Append 8 bytes to the current offset as a double */
-  public appendDouble(value: number) {
+  public appendDouble(value: number): this;
+  public appendDouble(value: number, endianness: Endianness): this;
+  public appendDouble(value: number, endianness: Endianness = this.endianness): this {
     this.grow(8);
-    return this.writeDouble(value);
+    return this.writeDouble(value, endianness);
   }
 
   /** Append 4 bytes to the current offset as a float */
-  public appendFloat(value: number) {
+  public appendFloat(value: number): this;
+  public appendFloat(value: number, endianness: Endianness): this;
+  public appendFloat(value: number, endianness: Endianness = this.endianness): this {
     this.grow(4);
-    return this.writeFloat(value);
+    return this.writeFloat(value, endianness);
   }
 
   /** Append raw bytes to the current offset */
@@ -369,16 +423,28 @@ export default class Packet {
   }
 
   /** Append a string to the current offset, growing by its encoded byte length */
-  public appendString(text: string, encoding: StringEncoding = 'latin1') {
+  public appendString(text: string): this;
+  public appendString(text: string, encoding: StringEncoding): this;
+  public appendString(text: string, encoding: StringEncoding = this.encoding): this {
     return this.appendBytes(Packet.encodeString(text, encoding));
   }
 
   // Helpers
 
   /** Set the byte order used by subsequent multi-byte reads and writes */
-  public useEndianness(order: 'BE' | 'LE') {
+  public useEndianness(order: Endianness) {
     this.littleEndian = order === 'LE';
     return this;
+  }
+
+  /** Set the string encoding used by subsequent string reads and writes */
+  public useEncoding(encoding: StringEncoding) {
+    this.encoding = encoding;
+    return this;
+  }
+
+  private get endianness(): Endianness {
+    return this.littleEndian ? 'LE' : 'BE';
   }
 
   private checkBounds(length: number) {

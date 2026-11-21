@@ -4,14 +4,8 @@
 
 ## Install
 
-```
+```sh
 npm install packetgram
-```
-
-_or_
-
-```
-yarn add packetgram
 ```
 
 ## Quick Start
@@ -89,6 +83,11 @@ packet.appendString(text, 'utf8');
 packet.offset = 5;
 packet.readString(packet.readUInt16(), 'utf8'); // 'héllo €'
 
+// Or set the packet's default encoding; a per-call encoding still overrides it
+packet.useEncoding('utf8');
+packet.appendString('€');
+packet.appendString('é', 'latin1');
+
 // Raw bytes (readBytes returns a copy)
 packet.appendBytes(new Uint8Array([1, 2, 3]));
 ```
@@ -111,6 +110,9 @@ packet.writeUInt32(420);
 
 // Switch back to big-endian
 packet.useEndianness('BE');
+
+// Or pass a byte order to a single read or write; the packet default is unchanged
+packet.writeUInt16(42, 'LE');
 ```
 
 ### Dumping Packet Contents
@@ -127,4 +129,3 @@ console.log(packet.toString());
 // 00000000  00 2a 00 00 01 a4 68 65  6c 6c 6f 00 00 00 00 00  | .*....hello..... |
 // 00000010  00 00 00 00                                       | ....             |
 ```
-
