@@ -7,10 +7,10 @@ describe('Node', () => {
     const packet = Packet.alloc(52);
     expect(packet.offset).toBe(0);
 
-    packet.readSByte();
+    packet.readInt8();
     expect(packet.offset).toBe(1);
 
-    packet.readByte();
+    packet.readUInt8();
     expect(packet.offset).toBe(2);
 
     packet.readInt16();
@@ -43,12 +43,12 @@ describe('Node', () => {
 
   it('readBytes returns bytes and advances offset', () => {
     const packet = Packet.alloc(6);
-    packet.writeByte(0x01);
-    packet.writeByte(0x02);
-    packet.writeByte(0x03);
-    packet.writeByte(0x04);
-    packet.writeByte(0x05);
-    packet.writeByte(0x06);
+    packet.writeUInt8(0x01);
+    packet.writeUInt8(0x02);
+    packet.writeUInt8(0x03);
+    packet.writeUInt8(0x04);
+    packet.writeUInt8(0x05);
+    packet.writeUInt8(0x06);
     packet.offset = 0;
 
     const first = packet.readBytes(3);
@@ -67,10 +67,10 @@ describe('Node', () => {
     const packet = Packet.alloc(52);
     expect(packet.offset).toBe(0);
 
-    packet.writeSByte(0);
+    packet.writeInt8(0);
     expect(packet.offset).toBe(1);
 
-    packet.writeByte(0);
+    packet.writeUInt8(0);
     expect(packet.offset).toBe(2);
 
     packet.writeInt16(0);
@@ -135,21 +135,21 @@ describe('Node', () => {
 
     const fromDataView = Packet.from(new DataView(new Uint8Array([5, 4, 3]).buffer, 1));
     expect(fromDataView.byteLength).toBe(2);
-    expect(fromDataView.readByte()).toBe(4);
+    expect(fromDataView.readUInt8()).toBe(4);
   });
 
   it('copies input data instead of sharing it', () => {
     const source = new Uint8Array([1, 2, 3]);
     const packet = Packet.from(source);
     source[0] = 99;
-    expect(packet.readByte()).toBe(1);
+    expect(packet.readUInt8()).toBe(1);
   });
 
   it('readBytes returns a copy', () => {
     const packet = Packet.alloc(2);
     const bytes = packet.readBytes(2);
     packet.offset = 0;
-    packet.writeByte(0xff);
+    packet.writeUInt8(0xff);
     expect(bytes[0]).toBe(0);
   });
 
@@ -176,8 +176,8 @@ describe('Node', () => {
 
   it('grows to make room', () => {
     const packet = new Packet(5).useEndianness('LE');
-    packet.appendSByte(-1);
-    packet.appendByte(1);
+    packet.appendInt8(-1);
+    packet.appendUInt8(1);
     packet.appendInt16(-2);
     packet.appendUInt16(2);
     packet.appendInt32(-3);
@@ -189,8 +189,8 @@ describe('Node', () => {
 
     packet.offset = 0;
 
-    expect(packet.readSByte()).toBe(-1);
-    expect(packet.readByte()).toBe(1);
+    expect(packet.readInt8()).toBe(-1);
+    expect(packet.readUInt8()).toBe(1);
     expect(packet.readInt16()).toBe(-2);
     expect(packet.readUInt16()).toBe(2);
     expect(packet.readInt32()).toBe(-3);
@@ -202,7 +202,7 @@ describe('Node', () => {
     const packet = Packet.alloc(200);
     packet.offset = 200;
 
-    packet.appendByte(1);
+    packet.appendUInt8(1);
     expect(packet.byteLength).toBe(201);
     expect(packet.toDataView().byteLength).toBe(201);
     expect(Packet.decode(Packet.encode(packet)).byteLength).toBe(201);
@@ -233,10 +233,7 @@ describe('Node', () => {
 
   it('defaults to utf8 and reads and writes strings by byte length', () => {
     const text = 'héllo €';
-    const byteLength = Packet.byteLength(text);
-    expect(byteLength).toBe(10);
-    expect(Packet.byteLength('héllo', 'latin1')).toBe(5);
-    expect(() => Packet.byteLength(text, 'latin1')).toThrow(RangeError);
+    const byteLength = 10;
 
     const packet = new Packet();
     expect(packet.encoding).toBe('utf8');
@@ -330,15 +327,15 @@ describe('Node', () => {
 
   it('reads and writes number values at their limits', () => {
     const packet = new Packet();
-    packet.appendSByte(-128).appendByte(255);
+    packet.appendInt8(-128).appendUInt8(255);
     packet.appendInt16(-32768).appendUInt16(65535);
     packet.appendInt32(-2147483648).appendUInt32(4294967295);
     packet.appendInt64(-(BigInt(2) ** BigInt(63))).appendUInt64(BigInt(2) ** BigInt(64) - BigInt(1));
     packet.appendFloat(1.5).appendDouble(Math.PI);
 
     packet.offset = 0;
-    expect(packet.readSByte()).toBe(-128);
-    expect(packet.readByte()).toBe(255);
+    expect(packet.readInt8()).toBe(-128);
+    expect(packet.readUInt8()).toBe(255);
     expect(packet.readInt16()).toBe(-32768);
     expect(packet.readUInt16()).toBe(65535);
     expect(packet.readInt32()).toBe(-2147483648);
@@ -361,10 +358,10 @@ describe('Node', () => {
 
   it('throws on integers that do not fit the type', () => {
     const packet = Packet.alloc(8);
-    expect(() => packet.writeByte(256)).toThrow(RangeError);
-    expect(() => packet.writeByte(-1)).toThrow(RangeError);
-    expect(() => packet.writeByte(1.5)).toThrow(RangeError);
-    expect(() => packet.writeSByte(128)).toThrow(RangeError);
+    expect(() => packet.writeUInt8(256)).toThrow(RangeError);
+    expect(() => packet.writeUInt8(-1)).toThrow(RangeError);
+    expect(() => packet.writeUInt8(1.5)).toThrow(RangeError);
+    expect(() => packet.writeInt8(128)).toThrow(RangeError);
     expect(() => packet.writeUInt16(-1)).toThrow(RangeError);
     expect(() => packet.writeInt16(32768)).toThrow(RangeError);
     expect(() => packet.writeUInt32(2 ** 32)).toThrow(RangeError);
@@ -391,7 +388,7 @@ describe('Node', () => {
     const packet = Packet.alloc(4);
 
     packet.offset = NaN;
-    expect(() => packet.readByte()).toThrow(RangeError);
+    expect(() => packet.readUInt8()).toThrow(RangeError);
     packet.offset = 0.5;
     expect(() => packet.readString(1)).toThrow(RangeError);
     packet.offset = 0;
@@ -413,7 +410,7 @@ describe('Node', () => {
     packet.skip(0, 'end');
     expect(packet.offset).toBe(4);
 
-    packet.skip(2).appendByte(1);
+    packet.skip(2).appendUInt8(1);
     expect(Array.from(packet.toUint8Array())).toEqual([0, 0, 0, 0, 0, 0, 1]);
   });
 
@@ -424,7 +421,6 @@ describe('Node', () => {
     expect(() => packet.useEndianness('le' as 'LE')).toThrow(TypeError);
     expect(() => packet.useEncoding('utf-8' as 'utf8')).toThrow(TypeError);
     expect(() => packet.readString(1, 'ascii' as 'utf8')).toThrow(TypeError);
-    expect(() => Packet.byteLength('a', 'utf-8' as 'utf8')).toThrow(TypeError);
     expect(packet.offset).toBe(0);
     expect(packet.endianness).toBe('BE');
     expect(packet.encoding).toBe('utf8');
@@ -455,7 +451,7 @@ describe('Node', () => {
     const packet = Packet.alloc(2);
     const bytes = packet.toUint8Array();
     const view = packet.toDataView();
-    packet.writeByte(0xff);
+    packet.writeUInt8(0xff);
     expect(bytes[0]).toBe(0);
     expect(view.getUint8(0)).toBe(0);
   });

@@ -48,11 +48,6 @@ export default class Packet {
 
   // Static
 
-  /** Number of bytes `text` takes in the given encoding (useful for length prefixes) */
-  public static byteLength(text: string, encoding: StringEncoding = 'utf8') {
-    return Packet.encodeString(text, encoding).length;
-  }
-
   /** Allocate a new buffer with the given size. */
   public static alloc(size?: number) {
     return new Packet(size);
@@ -109,7 +104,7 @@ export default class Packet {
   // Read
 
   /** Read 1 byte from the current offset as a signed number */
-  public readSByte(): number {
+  public readInt8(): number {
     this.checkBounds(1);
     const value = this.view.getInt8(this.offset);
     this.offset += 1;
@@ -147,7 +142,7 @@ export default class Packet {
   }
 
   /** Read 1 byte from the current offset as an unsigned number */
-  public readByte(): number {
+  public readUInt8(): number {
     this.checkBounds(1);
     const value = this.view.getUint8(this.offset);
     this.offset += 1;
@@ -238,8 +233,8 @@ export default class Packet {
   // Write
 
   /** Write 1 signed byte to the current offset */
-  public writeSByte(value: number): this {
-    Packet.checkInteger(value, -0x80, 0x7f, 'SByte');
+  public writeInt8(value: number): this {
+    Packet.checkInteger(value, -0x80, 0x7f, 'Int8');
     this.checkBounds(1);
     this.view.setInt8(this.offset, value);
     this.offset += 1;
@@ -280,8 +275,8 @@ export default class Packet {
   }
 
   /** Write 1 unsigned byte to the current offset */
-  public writeByte(value: number): this {
-    Packet.checkInteger(value, 0, 0xff, 'Byte');
+  public writeUInt8(value: number): this {
+    Packet.checkInteger(value, 0, 0xff, 'UInt8');
     this.checkBounds(1);
     this.view.setUint8(this.offset, value);
     this.offset += 1;
@@ -360,9 +355,9 @@ export default class Packet {
   // Append: write at the current offset, growing the packet if the value does not fit
 
   /** Append 1 signed byte to the current offset */
-  public appendSByte(value: number): this {
-    Packet.checkInteger(value, -0x80, 0x7f, 'SByte');
-    return this.grow(1).writeSByte(value);
+  public appendInt8(value: number): this {
+    Packet.checkInteger(value, -0x80, 0x7f, 'Int8');
+    return this.grow(1).writeInt8(value);
   }
 
   /** Append 2 signed bytes to the current offset */
@@ -390,9 +385,9 @@ export default class Packet {
   }
 
   /** Append 1 unsigned byte to the current offset */
-  public appendByte(value: number): this {
-    Packet.checkInteger(value, 0, 0xff, 'Byte');
-    return this.grow(1).writeByte(value);
+  public appendUInt8(value: number): this {
+    Packet.checkInteger(value, 0, 0xff, 'UInt8');
+    return this.grow(1).writeUInt8(value);
   }
 
   /** Append 2 unsigned bytes to the current offset */

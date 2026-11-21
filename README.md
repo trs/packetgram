@@ -79,10 +79,9 @@ const decoded = Packet.decode(encoded);
 ```javascript
 // Strings default to utf8. Lengths are always in bytes, not characters.
 const packet = new Packet();
-const text = 'héllo €';
-const length = Packet.byteLength(text); // 10
-packet.appendUInt16(length);
-packet.appendString(text);
+const text = new TextEncoder().encode('héllo €'); // 10 bytes
+packet.appendUInt16(text.length);
+packet.appendBytes(text);
 
 packet.offset = 0;
 packet.readString(packet.readUInt16()); // 'héllo €'
@@ -113,7 +112,7 @@ packet.skip(4, 'begin');  // to offset 4
 packet.skip(4, 'end');    // to 4 bytes before the end (offset 6)
 
 // The offset may move past the end; the next append fills the gap with zeros
-packet.skip(0, 'end').skip(2).appendByte(1); // packet is now 13 bytes
+packet.skip(0, 'end').skip(2).appendUInt8(1); // packet is now 13 bytes
 ```
 
 ### Errors
@@ -121,7 +120,7 @@ packet.skip(0, 'end').skip(2).appendByte(1); // packet is now 13 bytes
 Mistakes throw instead of silently corrupting data, and a failed read or write leaves the offset unchanged:
 
 - Reading or writing past the end of the packet throws a `RangeError`. Use the `append*` methods to grow the packet as you write.
-- Integers that don't fit the type, such as `writeByte(256)`, throw a `RangeError`.
+- Integers that don't fit the type, such as `writeUInt8(256)`, throw a `RangeError`.
 - Offsets and lengths must be non-negative integers.
 - Unknown endianness or encoding values, such as `'le'` or `'utf-8'`, throw a `TypeError`.
 - Invalid UTF-8 and invalid base64 throw when read or decoded.
