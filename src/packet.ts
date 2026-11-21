@@ -19,14 +19,13 @@ export default class Packet {
     } else if (typeof dataOrSize === 'number') {
       this.bytes = new Uint8Array(dataOrSize);
     } else {
-      // Views (Uint8Array, Node Buffer, DataView, ...) only cover part of their buffer,
-      // so respect their byteOffset/byteLength. `offset` and `length` are relative to the view.
+      // `offset` and `length` are relative to the view, not its underlying buffer
       const source = ArrayBuffer.isView(dataOrSize)
         ? new Uint8Array(dataOrSize.buffer, dataOrSize.byteOffset, dataOrSize.byteLength)
         : new Uint8Array(dataOrSize);
       const start = offset ?? 0;
       const end = length !== undefined ? start + length : undefined;
-      // slice() copies, so the packet never shares memory with the caller
+      // slice(), not subarray(), so the packet never shares memory with the caller
       this.bytes = source.slice(start, end);
     }
     this.view = new DataView(this.bytes.buffer, this.bytes.byteOffset, this.bytes.byteLength);
@@ -70,18 +69,14 @@ export default class Packet {
     
     // Use btoa in browser, Buffer in Node.js
     if (typeof btoa !== 'undefined') {
-      // For browser: convert Uint8Array to binary string efficiently
-      // Use chunked approach to avoid stack overflow and improve performance
       const chunkSize = 8192;
       if (bytes.length <= chunkSize) {
-        // Small arrays: use array join for better performance
         const chars: string[] = new Array(bytes.length);
         for (let i = 0; i < bytes.length; i++) {
           chars[i] = String.fromCharCode(bytes[i]);
         }
         return btoa(chars.join(''));
       } else {
-        // Large arrays: use chunked approach
         const chunks: string[] = [];
         for (let i = 0; i < bytes.length; i += chunkSize) {
           const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
@@ -107,7 +102,6 @@ export default class Packet {
     if (typeof atob !== 'undefined') {
       const binary = atob(base64);
       bytes = new Uint8Array(binary.length);
-      // Use set() with string iteration for better performance
       for (let i = 0; i < binary.length; i++) {
         bytes[i] = binary.charCodeAt(i);
       }
@@ -118,7 +112,6 @@ export default class Packet {
       throw new Error('Base64 decoding not available in this environment');
     }
 
-    // The constructor copies the requested range, so no intermediate copy is needed
     return new Packet(bytes);
   }
 
@@ -388,7 +381,6 @@ export default class Packet {
     return this;
   }
 
-  /** Throw a RangeError if `length` bytes at the current offset fall outside the packet */
   private checkBounds(length: number) {
     if (this.offset < 0 || length < 0 || this.offset + length > this.byteLength) {
       throw new RangeError(
@@ -401,15 +393,12 @@ export default class Packet {
   public grow(by: number) {
     if (this.offset + by > this.byteLength) {
       const requiredSize = this.offset + by;
-      // Use exponential growth to reduce reallocations for larger buffers
-      // Only apply exponential growth if buffer is already > 128 bytes to avoid wasting memory
-      // and maintain compatibility with tests that expect exact sizing
+      // Grow by 1.5x once past 128 bytes to reduce reallocations; small buffers grow exactly
       const newSize = this.byteLength > 128 
         ? Math.max(requiredSize, Math.floor(this.byteLength * 1.5))
         : requiredSize;
       const newBytes = new Uint8Array(newSize);
 
-      // Use bulk copy instead of byte-by-byte - much faster for large buffers
       newBytes.set(this.bytes);
 
       this.bytes = newBytes;
