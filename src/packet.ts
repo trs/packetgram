@@ -391,19 +391,23 @@ export default class Packet {
 
   /** Ensure there is room for `by` bytes at the current offset, enlarging the buffer if needed */
   public grow(by: number) {
-    if (this.offset + by > this.byteLength) {
-      const requiredSize = this.offset + by;
+    const requiredSize = this.offset + by;
+    if (requiredSize <= this.byteLength) return;
+
+    // `bytes` covers only the packet's contents; the buffer behind it may have spare capacity
+    let storage = this.bytes.buffer;
+    if (requiredSize > storage.byteLength) {
       // Grow by 1.5x once past 128 bytes to reduce reallocations; small buffers grow exactly
-      const newSize = this.byteLength > 128 
-        ? Math.max(requiredSize, Math.floor(this.byteLength * 1.5))
+      const capacity = storage.byteLength > 128
+        ? Math.max(requiredSize, Math.floor(storage.byteLength * 1.5))
         : requiredSize;
-      const newBytes = new Uint8Array(newSize);
-
+      const newBytes = new Uint8Array(capacity);
       newBytes.set(this.bytes);
-
-      this.bytes = newBytes;
-      this.view = new DataView(this.bytes.buffer, this.bytes.byteOffset, this.bytes.byteLength);
+      storage = newBytes.buffer;
     }
+
+    this.bytes = new Uint8Array(storage, 0, requiredSize);
+    this.view = new DataView(storage, 0, requiredSize);
   }
 
   /** Move the offset by `count`, relative to the beginning, the current offset, or the end */

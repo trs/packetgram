@@ -198,6 +198,25 @@ describe('Node', () => {
     expect(packet.readString(2)).toBe('Hi');
   })
 
+  it('grows large packets without exposing spare capacity', () => {
+    const packet = Packet.alloc(200);
+    packet.offset = 200;
+
+    packet.appendByte(1);
+    expect(packet.byteLength).toBe(201);
+    expect(packet.toDataView().byteLength).toBe(201);
+    expect(Packet.decode(Packet.encode(packet)).byteLength).toBe(201);
+    expect(() => packet.readUInt32()).toThrow(RangeError);
+
+    // Further appends reuse the spare capacity and keep earlier data
+    packet.appendUInt16(0x0203);
+    packet.appendString('ok');
+    expect(packet.byteLength).toBe(205);
+
+    packet.offset = 200;
+    expect(Array.from(packet.readBytes(5))).toEqual([1, 2, 3, 0x6f, 0x6b]);
+  });
+
   it('returns a hex dump of the packet', () => {
     const packet = new Packet(23);
     packet.writeUInt16(42);
