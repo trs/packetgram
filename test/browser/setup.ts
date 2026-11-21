@@ -4,7 +4,8 @@ import { beforeAll, afterAll } from 'vitest';
 let browser: Browser;
 
 beforeAll(async () => {
-  browser = await puppeteer.launch();
+  // GitHub's Ubuntu runners block Chrome's sandbox, so disable it in CI only
+  browser = await puppeteer.launch({ args: process.env.CI ? ['--no-sandbox'] : [] });
   globalThis.page = await browser.newPage();
 });
 
