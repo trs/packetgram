@@ -4,20 +4,7 @@
     <meta charset="utf-8"/>
   </head>
   <body>
-    <h1>Packet</h1>
-    <code id="packet"></code>
-
-    <code id="packet-encoded"></code>
-
+    <!-- Exposes the UMD build as window.Packet for test/browser/packet.spec.ts -->
     <script src="../../dist/packet.umd.cjs"></script>
-    <script>
-      const packet = new Packet(5);
-      packet.writeString('Hello');
-      packet.appendString(' World!');
-
-      document.getElementById('packet').innerText = packet.toString();
-
-      document.getElementById('packet-encoded').innerText = Packet.encode(packet);
-    </script>
   </body>
 </html>
